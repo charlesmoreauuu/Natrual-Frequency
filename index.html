@@ -792,22 +792,22 @@
             <div class="group-title">Turbine<button class="info-btn" data-info="turbine" aria-label="info">?</button></div>
             <div class="field"><label>Number of blades</label><input type="number" id="i_blades" value="3" step="1"/><span class="unit-tag">—</span></div>
             <div class="field"><label>Cut-in rotor speed</label><input type="number" id="i_rpmmin" value="5" step="0.1"/><span class="unit-tag">RPM</span></div>
-            <div class="field"><label>Rated rotor speed</label><input type="number" id="i_rpmmax" value="7.74" step="0.1"/><span class="unit-tag">RPM</span></div>
-            <div class="field"><label>RNA mass (rotor + nacelle)</label><input type="number" id="i_mrna" value="818000" step="1000"/><span class="unit-tag">kg</span></div>
+            <div class="field"><label>Rated rotor speed</label><input type="number" id="i_rpmmax" value="12.1" step="0.1"/><span class="unit-tag">RPM</span></div>
+            <div class="field"><label>RNA mass (rotor + nacelle)</label><input type="number" id="i_mrna" value="350000" step="1000"/><span class="unit-tag">kg</span></div>
           </div>
 
           <div class="group">
             <div class="group-title">Tower (steel)<button class="info-btn" data-info="tower" aria-label="info">?</button></div>
-            <div class="field"><label>Length</label><input type="number" id="i_Lt" value="130" step="1"/><span class="unit-tag">m</span></div>
-            <div class="field"><label>Average outer diameter</label><input type="number" id="i_Dt" value="6" step="0.1"/><span class="unit-tag">m</span></div>
-            <div class="field"><label>Average wall thickness</label><input type="number" id="i_tt" value="0.06" step="0.005"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Length</label><input type="number" id="i_Lt" value="80" step="1"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Average outer diameter</label><input type="number" id="i_Dt" value="5.5" step="0.1"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Average wall thickness</label><input type="number" id="i_tt" value="0.035" step="0.005"/><span class="unit-tag">m</span></div>
           </div>
 
           <div class="group">
             <div class="group-title">Monopile (steel)<button class="info-btn" data-info="pile" aria-label="info">?</button></div>
-            <div class="field"><label>Length above mudline</label><input type="number" id="i_Ls" value="68.2" step="1"/><span class="unit-tag">m</span></div>
-            <div class="field"><label>Outer diameter</label><input type="number" id="i_Dp" value="10" step="0.1"/><span class="unit-tag">m</span></div>
-            <div class="field"><label>Wall thickness</label><input type="number" id="i_tp" value="0.085" step="0.005"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Length above mudline</label><input type="number" id="i_Ls" value="35" step="1"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Outer diameter</label><input type="number" id="i_Dp" value="7" step="0.1"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Wall thickness</label><input type="number" id="i_tp" value="0.075" step="0.005"/><span class="unit-tag">m</span></div>
           </div>
 
           <div class="group">
@@ -818,14 +818,14 @@
 
           <div class="group">
             <div class="group-title">Site & hydrodynamics<button class="info-btn" data-info="site" aria-label="info">?</button></div>
-            <div class="field"><label>Water depth</label><input type="number" id="i_dw" value="63.2" step="1"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Water depth</label><input type="number" id="i_dw" value="30" step="1"/><span class="unit-tag">m</span></div>
             <div class="field"><label>Sea water density</label><input type="number" id="i_rhow" value="1025" step="5"/><span class="unit-tag">kg/m³</span></div>
-            <div class="field"><label>Wave peak period T<sub>p</sub></label><input type="number" id="i_Tp" value="10" step="0.5"/><span class="unit-tag">s</span></div>
+            <div class="field"><label>Wave peak period T<sub>p</sub></label><input type="number" id="i_Tp" value="8" step="0.5"/><span class="unit-tag">s</span></div>
           </div>
 
           <div class="group">
             <div class="group-title">Marine growth (baseline)<button class="info-btn" data-info="mg" aria-label="info">?</button></div>
-            <div class="field"><label>Thickness (equivalent uniform)</label><input type="number" id="i_tmg" value="0.074" step="0.005"/><span class="unit-tag">m</span></div>
+            <div class="field"><label>Thickness</label><input type="number" id="i_tmg" value="0.05" step="0.01"/><span class="unit-tag">m</span></div>
             <div class="field"><label>Density</label><input type="number" id="i_rhomg" value="1325" step="25"/><span class="unit-tag">kg/m³</span></div>
           </div>
 
@@ -833,19 +833,12 @@
             <div class="group-title">Foundation stiffness at mudline<button class="info-btn" data-info="foundation" aria-label="info">?</button></div>
             <div class="field"><label>Lateral spring k<sub>lat</sub></label><input type="number" id="i_klat" value="2.5e9" step="1e8"/><span class="unit-tag">N/m</span></div>
             <div class="field"><label>Rotational spring k<sub>rot</sub></label><input type="number" id="i_krot" value="3.0e11" step="1e10"/><span class="unit-tag">N·m/rad</span></div>
-            <div class="field"><label>Scour depth (applied in scour cases)</label><input type="number" id="i_scour" value="4" step="0.5"/><span class="unit-tag">m</span></div>
           </div>
 
           <div class="group">
             <div class="group-title">Acceptance margins (DNV-ST-0126)<button class="info-btn" data-info="margins" aria-label="info">?</button></div>
             <div class="field"><label>Min margin to 1P<sub>max</sub></label><input type="number" id="i_m1P" value="10" step="1"/><span class="unit-tag">%</span></div>
             <div class="field"><label>Min margin to 3P<sub>min</sub></label><input type="number" id="i_m3P" value="10" step="1"/><span class="unit-tag">%</span></div>
-          </div>
-
-          <div class="group">
-            <div class="group-title">Project target band (Ramboll)<button class="info-btn" data-info="targetband" aria-label="info">?</button></div>
-            <div class="field"><label>f₁ lower bound</label><input type="number" id="i_fLB" value="0.1358" step="0.001"/><span class="unit-tag">Hz</span></div>
-            <div class="field"><label>f₁ upper bound</label><input type="number" id="i_fUB" value="0.3686" step="0.001"/><span class="unit-tag">Hz</span></div>
           </div>
 
           <div class="actions">
@@ -892,7 +885,6 @@
               <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:rgba(242,92,92,0.35);border:1px solid rgba(242,92,92,0.6)"></div>1P band</div>
               <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:rgba(245,166,35,0.30);border:1px solid rgba(245,166,35,0.6)"></div>3P band</div>
               <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:rgba(0,212,170,0.20);border:1px solid var(--accent-dim)"></div>Soft-stiff gap</div>
-              <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:rgba(0,212,170,0.4);border:1px solid #00d4aa"></div>Project band (Ramboll)</div>
               <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:var(--text)"></div>f₁</div>
               <div class="freq-legend-item"><div class="freq-legend-swatch" style="background:#60a5fa"></div>Wave f<sub>p</sub></div>
             </div>
@@ -1013,11 +1005,11 @@
 
 <script>
 const SCENARIOS = [
-  { id:"base",  name:"Baseline",          desc:"As-designed condition. All factors at 1.00, no scour.",                                       klat:1.00, krot:1.00, mg:1.00, scour:0 },
-  { id:"soft",  name:"Softer soil",       desc:"Reduced lateral & rotational foundation stiffness at one WTG.",                               klat:0.50, krot:0.50, mg:1.00, scour:0 },
-  { id:"mg",    name:"More marine growth",desc:"Marine growth thickness doubled on submerged length.",                                        klat:1.00, krot:1.00, mg:2.00, scour:0 },
-  { id:"scour", name:"Larger scour",      desc:"Scour hole drops mudline → Lp grows by scour depth and soil springs are degraded.",            klat:0.70, krot:0.65, mg:1.00, scour:1 },
-  { id:"worst", name:"Combined worst",    desc:"All adverse conditions stacked: soft soil, MG×2, full scour-depth deepening (envelope check).",klat:0.40, krot:0.35, mg:2.00, scour:1 }
+  { id:"base",  name:"Baseline",          desc:"As-designed condition. All factors at 1.00.",                         klat:1.00, krot:1.00, mg:1.00 },
+  { id:"soft",  name:"Softer soil",       desc:"Reduced lateral & rotational foundation stiffness at one WTG.",       klat:0.50, krot:0.50, mg:1.00 },
+  { id:"mg",    name:"More marine growth",desc:"Marine growth thickness doubled on submerged length.",                klat:1.00, krot:1.00, mg:2.00 },
+  { id:"scour", name:"Larger scour",      desc:"Larger scour holes reduce effective embedment → soil stiffness drops.",klat:0.70, krot:0.65, mg:1.00 },
+  { id:"worst", name:"Combined worst",    desc:"All adverse conditions stacked (envelope check).",                     klat:0.40, krot:0.35, mg:2.00 }
 ];
 
 let activeScenario = "base";
@@ -1064,9 +1056,6 @@ function getInputs() {
     rhomg: v("i_rhomg"),
     klat:  v("i_klat"),
     krot:  v("i_krot"),
-    scour: v("i_scour"),
-    fLB:   v("i_fLB"),
-    fUB:   v("i_fUB"),
     m1P:   v("i_m1P")/100,
     m3P:   v("i_m3P")/100
   };
@@ -1078,21 +1067,17 @@ function compute(scen) {
   const tmg = I.tmg * scen.mg;
   const klat = I.klat * scen.klat;
   const krot = I.krot * scen.krot;
-  // Scour: mudline drops by scourDepth → Ls (above-mudline pile) grows; water depth grows by the same amount
-  const scourDepth = I.scour * scen.scour;
-  const Ls   = I.Ls + scourDepth;
-  const dw   = I.dw + scourDepth;
   const Dsub = I.Dp + 2*tmg;
   const It = Math.PI/64 * (Math.pow(I.Dt,4) - Math.pow(I.Dt - 2*I.tt, 4));
   const Ip = Math.PI/64 * (Math.pow(I.Dp,4) - Math.pow(I.Dp - 2*I.tp, 4));
-  const EI = I.E * (It*I.Lt + Ip*Ls) / (I.Lt + Ls);
-  const L  = I.Lt + Ls;
+  const EI = I.E * (It*I.Lt + Ip*I.Ls) / (I.Lt + I.Ls);
+  const L  = I.Lt + I.Ls;
   const mt = I.rhos * Math.PI/4 * (Math.pow(I.Dt,2) - Math.pow(I.Dt-2*I.tt,2));
   const mp = I.rhos * Math.PI/4 * (Math.pow(I.Dp,2) - Math.pow(I.Dp-2*I.tp,2));
   const ma = I.rhow * Math.PI/4 * Math.pow(Dsub,2);
   const mmg= I.rhomg* Math.PI/4 * (Math.pow(Dsub,2) - Math.pow(I.Dp,2));
-  const submerged = Math.min(dw, Ls);
-  const mdist = mt*I.Lt + mp*Ls + (ma + mmg)*submerged;
+  const submerged = Math.min(I.dw, I.Ls);
+  const mdist = mt*I.Lt + mp*I.Ls + (ma + mmg)*submerged;
   const meq  = I.Mrna + 0.227*mdist;
   const kstr = 3 * EI / Math.pow(L,3);
   const keq  = 1 / (1/kstr + 1/klat + L*L/krot);
@@ -1107,7 +1092,7 @@ function compute(scen) {
   const m1P = (f1 - f1Pmax) / f1Pmax;
   const m3P = (f3Pmin - f1) / f3Pmin;
 
-  // Classify against 1P/3P bands (DNV margin rule)
+  // Classify
   const pass1P = m1P >= I.m1P;
   const pass3P = m3P >= I.m3P;
   let verdict;
@@ -1115,19 +1100,10 @@ function compute(scen) {
   else if (pass1P && pass3P) verdict = "pass";
   else verdict = "warn";
 
-  // Classify against project target band (Ramboll)
-  const inProjBand = (f1 >= I.fLB && f1 <= I.fUB);
-  const projVerdict = inProjBand ? "pass" : "fail";
-  // Headroom inside the project band (distance to nearer edge as % of f1)
-  const projHeadroom = inProjBand
-    ? Math.min((f1 - I.fLB)/f1, (I.fUB - f1)/f1)
-    : -Math.min(Math.abs(f1 - I.fLB)/f1, Math.abs(f1 - I.fUB)/f1);
-
   return {
     I, scen, f1, f1Pmin, f1Pmax, f3Pmin, f3Pmax, fp,
-    Dsub, It, Ip, EI, L, Ls, dw, scourDepth, mt, mp, ma, mmg, mdist, meq, kstr, klat, krot, keq,
-    m1P, m3P, pass1P, pass3P, verdict,
-    inProjBand, projVerdict, projHeadroom
+    Dsub, It, Ip, EI, L, mt, mp, ma, mmg, mdist, meq, kstr, klat, krot, keq,
+    m1P, m3P, pass1P, pass3P, verdict
   };
 }
 
@@ -1226,12 +1202,7 @@ function recalcAll() {
   }
 
   // Detail table
-  const projBandStatus = R.inProjBand
-    ? `<span style="color:var(--success)">in band (${(R.projHeadroom*100).toFixed(1)}% headroom)</span>`
-    : `<span style="color:var(--danger)">outside band (${(R.projHeadroom*100).toFixed(1)}%)</span>`;
   document.getElementById("detail-table").innerHTML = `
-    <div class="detail-row"><span class="detail-label">Scour depth applied in this scenario</span><span class="detail-value">${R.scourDepth.toFixed(2)} m</span></div>
-    <div class="detail-row"><span class="detail-label">Effective Lp (above mudline, incl. scour)</span><span class="detail-value">${R.Ls.toFixed(1)} m</span></div>
     <div class="detail-row"><span class="detail-label">Total length L (tower + substructure above mudline)</span><span class="detail-value">${R.L.toFixed(1)} m</span></div>
     <div class="detail-row"><span class="detail-label">Tower I</span><span class="detail-value">${R.It.toExponential(3)} m⁴</span></div>
     <div class="detail-row"><span class="detail-label">Pile I</span><span class="detail-value">${R.Ip.toExponential(3)} m⁴</span></div>
@@ -1246,7 +1217,6 @@ function recalcAll() {
     <div class="detail-row"><span class="detail-label">Equivalent tip stiffness k_eq</span><span class="detail-value">${R.keq.toExponential(3)} N/m</span></div>
     <div class="detail-row"><span class="detail-label">Wave peak frequency f_p (= 1/T_p)</span><span class="detail-value">${R.fp.toFixed(3)} Hz</span></div>
     <div class="detail-row"><span class="detail-label">Separation |f₁ − f_p|</span><span class="detail-value">${(Math.abs(R.f1-R.fp)/R.fp*100).toFixed(1)} %</span></div>
-    <div class="detail-row"><span class="detail-label">Project target band (${R.I.fLB.toFixed(3)} – ${R.I.fUB.toFixed(3)} Hz)</span><span class="detail-value">${projBandStatus}</span></div>
   `;
 }
 
@@ -1256,8 +1226,8 @@ function drawDiagram(R) {
   const W = 800, H = 120;
   const pad = 20;
 
-  // X range: from 0 to max(3P_max, f1, fp, project UB) * 1.2
-  const fmax = Math.max(R.f3Pmax * 1.25, R.f1 * 1.4, R.fp * 1.3, R.I.fUB * 1.15, 0.6);
+  // X range: from 0 to max(3P_max, f1, fp) * 1.2
+  const fmax = Math.max(R.f3Pmax * 1.25, R.f1 * 1.4, R.fp * 1.3, 0.6);
   const xs = f => pad + (W - 2*pad) * (f / fmax);
   const y0 = 65;  // axis line
 
@@ -1274,12 +1244,6 @@ function drawDiagram(R) {
   if (R.f3Pmin > R.f1Pmax) {
     html += `<rect x="${xs(R.f1Pmax)}" y="${y0-25}" width="${xs(R.f3Pmin)-xs(R.f1Pmax)}" height="50"
               fill="rgba(0,212,170,0.18)" stroke="rgba(0,122,99,0.6)" stroke-dasharray="4 3"/>`;
-  }
-  // Project target band (Ramboll) — drawn as a thin overlay strip just above the axis
-  if (R.I.fUB > R.I.fLB) {
-    html += `<rect x="${xs(R.I.fLB)}" y="${y0-40}" width="${xs(R.I.fUB)-xs(R.I.fLB)}" height="10"
-              fill="rgba(0,212,170,0.25)" stroke="rgba(0,212,170,0.9)" stroke-width="1"/>`;
-    html += `<text x="${(xs(R.I.fLB)+xs(R.I.fUB))/2}" y="${y0-43}" fill="#00d4aa" font-family="IBM Plex Mono" font-size="9" text-anchor="middle">project band ${R.I.fLB.toFixed(3)}–${R.I.fUB.toFixed(3)} Hz</text>`;
   }
 
   // Axis line
@@ -1329,15 +1293,13 @@ function drawDiagram(R) {
 
 // ── Reset & export ──
 const DEFAULTS = {
-  i_blades:3, i_rpmmin:5, i_rpmmax:7.74, i_mrna:818000,
-  i_Lt:130, i_Dt:6, i_tt:0.06,
-  i_Ls:68.2, i_Dp:10, i_tp:0.085,
+  i_blades:3, i_rpmmin:5, i_rpmmax:12.1, i_mrna:350000,
+  i_Lt:80, i_Dt:5.5, i_tt:0.035,
+  i_Ls:35, i_Dp:7, i_tp:0.075,
   i_E:2.1e11, i_rhos:7850,
-  i_dw:63.2, i_rhow:1025, i_Tp:10,
-  i_tmg:0.074, i_rhomg:1325,
+  i_dw:30, i_rhow:1025, i_Tp:8,
+  i_tmg:0.05, i_rhomg:1325,
   i_klat:2.5e9, i_krot:3.0e11,
-  i_scour:4,
-  i_fLB:0.1358, i_fUB:0.3686,
   i_m1P:10, i_m3P:10
 };
 function resetDefaults() {
@@ -1739,12 +1701,6 @@ Mass per metre: <code>ρ_s·π/4·(D² − (D−2t)²)</code></p>
 <p>DNV-ST-0126 recommends ≥10%. f₁ passes only if:</p>
 <p><code>(f₁ − 1P_max) / 1P_max ≥ margin_1P</code> AND<br>
 <code>(3P_min − f₁) / 3P_min ≥ margin_3P</code></p>`,
-
-  targetband: `<p>...as the project-specific eigenfrequency band issued by Ramboll for ACCRAR.</p>
-<p>Derived with a 5% buffer around the rated-rotor harmonics:</p>
-<p><code>LB = 1P_rated / 0.95 = 0.1358 Hz</code><br>
-<code>UB = 3P_rated / 1.05 = 0.3686 Hz</code></p>
-<p>This is shown as a teal strip on the band diagram and a pass/fail line in the detail table. It runs in parallel with the DNV ≥10% rule — both must hold for an unambiguous green light.</p>`,
 
   scenarios: `<p>...to compare the structure under each life-extension reassessment case from the project brief.</p>
 <p>• <strong>Baseline</strong> — as-designed.<br>
