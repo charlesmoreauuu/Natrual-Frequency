@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PISA + NFA combined tool - ACCRAR wind farm</title>
+<style>
+  :root {
+    --bg:        #0b0f14;
+    --panel:     #131922;
+    --panel2:    #1a212c;
+    --line:      #2a3340;
+    --text:      #e6ecf2;
+    --muted:     #8a94a3;
+    --accent:    #4ea1ff;
+    --pass:      #2ecc71;
+    --warn:      #f5a623;
+    --fail:      #f25c5c;
+    --field-bg:  #0e141c;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 18px;
+    font: 14px/1.5 var(--font-sans);
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+  .sub { color: var(--muted); margin-bottom: 18px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .panel h2 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px 18px;
+  }
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .field label { color: var(--muted); flex: 1; font-size: 13px; }
+  .field input {
+    width: 110px; padding: 4px 6px;
+    background: var(--field-bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 4px;
+    font: 13px var(--font-mono);
+    text-align: right;
+  }
+  .field .unit { color: var(--muted); width: 50px; font-size: 12px; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font: 12.5px var(--font-mono);
+  }
+  th, td {
+    padding: 5px 7px; text-align: right;
+    border-bottom: 1px solid var(--line);
+  }
+  th { color: var(--muted); font-weight: 500; text-align: right; }
+  td:first-child, th:first-child { text-align: left; }
+  td input, td select {
+    width: 100%; padding: 3px 5px;
+    background: var(--field-bg); color: var(--text);
+    border: 1px solid transparent; border-radius: 3px;
+    font: inherit; text-align: right;
+  }
+  td input:focus, td select:focus { border-color: var(--accent); outline: none; }
+  .row-btns { display: flex; gap: 6px; justify-content: center; }
+  button {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 4px;
+    padding: 5px 10px; cursor: pointer; font: 12.5px inherit;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+    padding: 8px 18px; font-weight: 600;
+  }
+  button.primary:hover { background: #2c89ed; }
+  details { margin-top: 8px; }
+  details summary {
+    cursor: pointer; color: var(--muted);
+    font-size: 12.5px; padding: 4px 0;
+  }
+  details[open] summary { color: var(--accent); }
+  .results {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px; margin-top: 6px;
+  }
+  .result-card {
+    background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 10px 12px;
+  }
+  .result-card .label { color: var(--muted); font-size: 12px; }
+  .result-card .value {
+    font: 600 18px var(--font-mono);
+    margin-top: 2px;
+  }
+  .result-card .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .pass { color: var(--pass); }
+  .warn { color: var(--warn); }
+  .fail { color: var(--fail); }
+  .verdict-bar {
+    border-radius: 6px; padding: 12px 14px;
+    margin-top: 10px; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--line);
+  }
+  .verdict-bar.pass { background: rgba(46,204,113,0.10); border-color: rgba(46,204,113,0.4); color: var(--pass); }
+  .verdict-bar.warn { background: rgba(245,166,35,0.10); border-color: rgba(245,166,35,0.4); color: var(--warn); }
+  .verdict-bar.fail { background: rgba(242,92,92,0.10); border-color: rgba(242,92,92,0.4); color: var(--fail); }
+  .freq-svg { width: 100%; height: 130px; background: var(--panel2);
+              border-radius: 6px; margin-top: 8px; }
+  .freq-legend {
+    display: flex; flex-wrap: wrap; gap: 8px 14px;
+    font-size: 12px; color: var(--muted);
+    margin-top: 6px;
+  }
+  .freq-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .freq-legend i {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .freq-legend sub { font-size: 0.85em; line-height: 0; vertical-align: baseline; }
+  .layout {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+  .note {
+    color: var(--muted); font-size: 12px;
+    background: var(--field-bg); padding: 8px 10px;
+    border-radius: 5px; border-left: 3px solid var(--accent);
+    margin-top: 8px;
+  }
+  .preset-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .preset-row button.preset-active {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<h1>PISA 1D solver + NFA forcing tool</h1>
+<div class="sub">
+  Combined foundation-stiffness solver (PISA, Byrne/Burd et al. 2020) and natural-frequency check
+  (DNV-ST-0126).  Edit any input - results recompute live.
+</div>
+
+<div class="layout">
+
+<!-- LEFT COLUMN -->
+<div>
+
+  <div class="panel">
+    <h2>1. Pile geometry (embedded section for PISA)</h2>
+    <div class="grid">
+      <div class="field"><label>OD (embedded)</label><input id="D_emb" value="11.0"><span class="unit">m</span></div>
+      <div class="field"><label>Wall thickness</label><input id="t_emb" value="0.085"><span class="unit">m</span></div>
+      <div class="field"><label>Embedded length L_emb</label><input id="L_emb" value="28.4"><span class="unit">m</span></div>
+      <div class="field"><label>Steel E</label><input id="E_st" value="2.1e11"><span class="unit">Pa</span></div>
+      <div class="field"><label>Steel ρ</label><input id="rho_st" value="7850"><span class="unit">kg/m³</span></div>
+      <div class="field"><label>FE elements</label><input id="n_elem" value="80"><span class="unit">-</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2. Soil profile</h2>
+    <div class="preset-row">
+      <button onclick="loadPreset('initial')">Initial</button>
+      <button onclick="loadPreset('updated')">Updated</button>
+      <button onclick="loadPreset('scour')">Updated + 4 m scour</button>
+    </div>
+    <div class="note" style="margin-top:0; margin-bottom:8px;">
+      Each preset bundles a consistent set: soil profile, T<sub>p</sub>, marine growth (zoned at
+      −40 mMSL), L<sub>emb</sub>, L<sub>s</sub>, d<sub>w</sub>, and taper z's.
+      Initial uses DB Tables 10-1, 11-1, 5-2.  Updated uses Tables 12-1, 12-2, 12-3.
+      Scour drops the mudline by 4 m per DB §12.2: L<sub>emb</sub> reduces by 4 m and
+      L<sub>s</sub>, d<sub>w</sub>, taper z's each increase by 4 m.
+    </div>
+    <table id="soil-table">
+      <thead>
+        <tr>
+          <th>z_top [m]</th><th>z_bot [m]</th><th>type</th>
+          <th>γ' [kN/m³]</th><th>φ [°]</th><th>s_u [kPa]</th><th>E [MPa]</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="soil-tbody"></tbody>
+    </table>
+    <div style="margin-top:8px;">
+      <button onclick="addSoilRow()">+ add layer</button>
+    </div>
+    <div class="note">
+      Layer below the deepest row extends to pile tip.  φ is used for sand, s_u for clay.
+      E is the small-strain Young's modulus used to derive G₀ via G = E / (2(1+ν)).
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>3. PISA initial-stiffness coefficients</h2>
+    <div class="note">
+      Nominal values: Dunkirk dense sand (Burd et al. 2020), Cowden stiff till (Byrne et al. 2020).
+      Verify against the Géotechnique papers before using results in a deliverable.
+    </div>
+    <details>
+      <summary>Sand coefficients (click to edit)</summary>
+      <div class="grid" style="margin-top:8px;">
+        <div class="field"><label>k_p* (lateral)</label><input id="kp_sand" value="8.731"><span class="unit">-</span></div>
+        <div class="field"><label>k_m* (moment)</label><input id="km_sand" value="1.000"><span class="unit">-</span></div>
+        <div class="field"><label>k_HB* (base shear)</label><input id="kHB_sand" value="2.717"><span class="unit">-</span></div>
+        <div class="field"><label>k_MB* (base moment)</label><input id="kMB_sand" value="1.531"><span class="unit">-</span></div>
+        <div class="field"><label>ν (sand)</label><input id="nu_sand" value="0.30"><span class="unit">-</span></div>
+      </div>
+    </details>
+    <details>
+      <summary>Clay coefficients (click to edit)</summary>
+      <div class="grid" style="margin-top:8px;">
+        <div class="field"><label>k_p* (lateral)</label><input id="kp_clay" value="10.6"><span class="unit">-</span></div>
+        <div class="field"><label>k_m* (moment)</label><input id="km_clay" value="1.420"><span class="unit">-</span></div>
+        <div class="field"><label>k_HB* (base shear)</label><input id="kHB_clay" value="2.410"><span class="unit">-</span></div>
+        <div class="field"><label>k_MB* (base moment)</label><input id="kMB_clay" value="1.130"><span class="unit">-</span></div>
+        <div class="field"><label>ν (clay, undrained)</label><input id="nu_clay" value="0.495"><span class="unit">-</span></div>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel">
+    <h2>4. Above-mudline structure (cantilever model)</h2>
+    <div class="grid">
+      <div class="field"><label>Pile L above mudline</label><input id="Ls" value="68.2"><span class="unit">m</span></div>
+      <div class="field"><label>OD at mudline</label><input id="D_pile_bot" value="11.0"><span class="unit">m</span></div>
+      <div class="field"><label>OD at MP top</label><input id="D_above" value="8.0"><span class="unit">m</span></div>
+      <div class="field"><label>Pile wall (above)</label><input id="t_above" value="0.085"><span class="unit">m</span></div>
+      <div class="field"><label>Taper start (z above mudline)</label><input id="z_taper_bot" value="27.2"><span class="unit">m</span></div>
+      <div class="field"><label>Taper end (z above mudline)</label><input id="z_taper_top" value="56.2"><span class="unit">m</span></div>
+      <div class="field"><label>RNA mass</label><input id="Mrna" value="818000"><span class="unit">kg</span></div>
+    </div>
+    <div class="note">
+      Above-mudline pile OD: constant at OD@mudline below taper start, linear taper to OD@MP top
+      across the taper zone, constant at OD@MP top above taper end.
+      Defaults match the DB Appendix 1 drawing (11.0 m at base, 8.0 m at top, taper from
+      −36 to −7 mMSL ≈ z=27.2 to 56.2 m above the −63.2 mMSL mudline).  Set taper end = taper start
+      to disable the taper.
+    </div>
+    <h3 style="font-size:13px; color:var(--muted); margin:14px 0 6px; font-weight:500; text-transform:uppercase; letter-spacing:0.4px;">
+      Tower profile (DB tower doc v1.0 §2)
+    </h3>
+    <table id="tower-table">
+      <thead>
+        <tr>
+          <th>z above tower base [m]</th>
+          <th>OD [m]</th>
+          <th>wall [mm]</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tower-tbody"></tbody>
+    </table>
+    <div style="margin-top:8px;">
+      <button onclick="addTowerRow()">+ add row</button>
+      <button onclick="loadTowerDefault()">Reset to DB</button>
+    </div>
+    <div class="note">
+      Tower modelled as N linearly-interpolated segments between these rows.
+      Stiffness computed by numerical double-integration of curvature (proper stepped cantilever).
+      Modal mass computed by Rayleigh's method using the static-deflection mode shape.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>5. Site &amp; rotor</h2>
+    <div class="grid">
+      <div class="field"><label>Water depth (MSL)</label><input id="dw" value="63.2"><span class="unit">m</span></div>
+      <div class="field"><label>SWL min (50-yr neg)</label><input id="SWL_min" value="-2.71"><span class="unit">mMSL</span></div>
+      <div class="field"><label>SWL max (50-yr pos)</label><input id="SWL_max" value="3.16"><span class="unit">mMSL</span></div>
+      <div class="field"><label>Sea water ρ</label><input id="rho_w" value="1025"><span class="unit">kg/m³</span></div>
+      <div class="field"><label>Wave T_p (50-yr)</label><input id="Tp" value="14.3"><span class="unit">s</span></div>
+      <div class="field"><label>Wave T min (band)</label><input id="Tp_min" value="9.5"><span class="unit">s</span></div>
+      <div class="field"><label>Wave T max (band)</label><input id="Tp_max" value="14.7"><span class="unit">s</span></div>
+      <div class="field"><label>Surface current U</label><input id="U_curr" value="1.56"><span class="unit">m/s</span></div>
+      <div class="field"><label>Strouhal St</label><input id="St" value="0.20"><span class="unit">-</span></div>
+      <div class="field"><label>MG t (above −40 mMSL)</label><input id="tmg" value="0.090"><span class="unit">m</span></div>
+      <div class="field"><label>MG t (below −40 mMSL)</label><input id="tmg_deep" value="0.045"><span class="unit">m</span></div>
+      <div class="field"><label>Marine growth ρ</label><input id="rho_mg" value="1300"><span class="unit">kg/m³</span></div>
+      <div class="field"><label>Blades N_b</label><input id="Nb" value="3"><span class="unit">-</span></div>
+      <div class="field"><label>Cut-in rotor speed</label><input id="rpm_min" value="7.74"><span class="unit">RPM</span></div>
+      <div class="field"><label>Rated rotor speed</label><input id="rpm_max" value="7.74"><span class="unit">RPM</span></div>
+      <div class="field"><label>Min margin to 1P</label><input id="m1P" value="10"><span class="unit">%</span></div>
+      <div class="field"><label>Min margin to 3P</label><input id="m3P" value="10"><span class="unit">%</span></div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin: 14px 0;">
+    <button class="primary" onclick="compute()">Recompute everything</button>
+    <span style="margin-left:14px; color:var(--muted); font-size:12px;">
+      (auto-runs on every input change)
+    </span>
+  </div>
+
+</div>
+
+<!-- RIGHT COLUMN -->
+<div>
+
+  <div class="panel">
+    <h2>PISA - mudline foundation stiffness</h2>
+    <div class="results">
+      <div class="result-card">
+        <div class="label">K_lat</div>
+        <div class="value" id="r_klat">-</div>
+        <div class="sub" id="r_klat_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">K_rot</div>
+        <div class="value" id="r_krot">-</div>
+        <div class="sub" id="r_krot_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">K_lat-rot (coupling)</div>
+        <div class="value" id="r_kcoup">-</div>
+        <div class="sub">off-diagonal, not used by NFA</div>
+      </div>
+      <div class="result-card">
+        <div class="label">EI (pile, embedded)</div>
+        <div class="value" id="r_EI">-</div>
+        <div class="sub" id="r_G0">-</div>
+      </div>
+    </div>
+    <div class="note">
+      ±20 % sensitivity on PISA k* coefficients: <span id="r_sens">-</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>NFA - first natural frequency and soft-stiff check</h2>
+    <div class="results">
+      <div class="result-card">
+        <div class="label">f₁</div>
+        <div class="value" id="r_f1">-</div>
+        <div class="sub" id="r_f1_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">1P max</div>
+        <div class="value" id="r_1P">-</div>
+        <div class="sub" id="r_1P_sub">required: f₁ &gt; 1P</div>
+      </div>
+      <div class="result-card">
+        <div class="label">3P min</div>
+        <div class="value" id="r_3P">-</div>
+        <div class="sub" id="r_3P_sub">required: f₁ &lt; 3P</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Margin to 1P</div>
+        <div class="value" id="r_m1P">-</div>
+        <div class="sub" id="r_m1P_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Margin to 3P</div>
+        <div class="value" id="r_m3P">-</div>
+        <div class="sub" id="r_m3P_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Modal mass</div>
+        <div class="value" id="r_meq">-</div>
+        <div class="sub">M_RNA + 33/140 × m_dist</div>
+      </div>
+      <div class="result-card">
+        <div class="label">f₁ envelope (SWL)</div>
+        <div class="value" id="r_f1env">-</div>
+        <div class="sub" id="r_f1env_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">Wave f_p band</div>
+        <div class="value" id="r_fpband">-</div>
+        <div class="sub" id="r_fpband_sub">-</div>
+      </div>
+      <div class="result-card">
+        <div class="label">VIV f_s (Strouhal)</div>
+        <div class="value" id="r_viv">-</div>
+        <div class="sub" id="r_viv_sub">-</div>
+      </div>
+    </div>
+    <div class="verdict-bar" id="verdict-bar">-</div>
+
+    <svg class="freq-svg" id="freq-svg" viewBox="0 0 800 130"></svg>
+    <div class="freq-legend">
+      <span><i style="background:#f25c5c;"></i> 1P (rotor)</span>
+      <span><i style="background:#f5a623;"></i> 3P (blade-passing)</span>
+      <span><i style="background:rgba(78,161,255,0.6);"></i> f₁ (with envelope bar = SWL range)</span>
+      <span><i style="background:rgba(78,161,255,0.18); border:1px solid #4ea1ff;"></i> DB target [0.129, 0.387] Hz</span>
+      <span><i style="background:rgba(136,136,136,0.4);"></i> wave f<sub>p</sub> band</span>
+      <span><i style="background:#2dd4bf;"></i> VIV f<sub>s</sub></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Methodology</h2>
+    <div class="note">
+      <b>PISA.</b> Four-component Winkler model (distributed lateral p, distributed moment m,
+      base shear H_B, base moment M_B) linearised at zero displacement.  Pile = Euler-Bernoulli beam,
+      N elements.  Soil distributed springs lumped at nodes by tributary length.  Base springs
+      concentrated at the pile-tip node.  Mudline stiffness extracted by applying unit force and
+      unit moment at the head, inverting the resulting 2×2 flexibility.
+      <br><br>
+      <b>NFA.</b> Stepped cantilever from mudline to hub.  Above-mudline pile = 1 segment;
+      tower = N segments interpolated from the DB tower doc profile (section 4 above).
+      Per-node EI and mass per unit length computed at ~0.5 m resolution.
+      Stiffness: k_str = 1/δ_tip, where δ_tip is from double-integration of curvature
+      κ(z) = M(z)/EI(z) under a unit tip force (proper stepped-beam result, not length-weighted EI).
+      Modal mass via Rayleigh: M_eq = M_RNA + ∫ m(z) ψ²(z) dz, with ψ = δ/δ_tip
+      (static-deflection mode shape - energy-consistent, replaces 33/140 × m_dist).
+      Added hydrodynamic mass ρ_w × π/4 × D² and marine growth mass applied over submerged length.
+      Series compliance with PISA mudline springs: 1/k_eq = 1/k_str + 1/K_lat + L²/K_rot.
+      f₁ = (1/2π) √(k_eq / M_eq).
+      <br><br>
+      <b>SWL envelope.</b> NFA is recomputed at the 50-yr positive and negative still-water levels
+      (Table 10-3); margins use the worst-case f₁ - lowest f₁ versus 1P, highest f₁ versus 3P.
+      <br>
+      <b>Wave f<sub>p</sub> band.</b> Period band from T<sub>min</sub> (THmax lower at 1-yr)
+      to T<sub>max</sub> (T<sub>p</sub> at 100-yr) per Table 10-1.  Overlap with the soft-stiff window
+      triggers a warning.
+      <br>
+      <b>VIV check.</b> Strouhal vortex-shedding frequency f<sub>s</sub> = St × U / D, with U = 50-yr
+      surface current (Table 10-4) and D = above-mudline pile OD.  Required by DNV-ST-0126 §3.6.3.
+      f<sub>s</sub> within ±10 % of f₁, or inside the soft-stiff window, triggers a warning.
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+// ───────────────────────────────────────────────────────────────────────
+// LINEAR ALGEBRA - small dense Gaussian elimination with partial pivot
+// ───────────────────────────────────────────────────────────────────────
+function solve(A, b) {
+  const n = b.length;
+  // copy
+  const M = new Array(n);
+  for (let i = 0; i < n; i++) M[i] = A[i].slice();
+  const v = b.slice();
+  for (let k = 0; k < n; k++) {
+    // pivot
+    let p = k;
+    for (let i = k+1; i < n; i++) {
+      if (Math.abs(M[i][k]) > Math.abs(M[p][k])) p = i;
+    }
+    if (p !== k) {
+      const tmp = M[k]; M[k] = M[p]; M[p] = tmp;
+      const tv = v[k]; v[k] = v[p]; v[p] = tv;
+    }
+    const pv = M[k][k];
+    if (Math.abs(pv) < 1e-30) throw new Error("singular at row " + k);
+    for (let i = k+1; i < n; i++) {
+      const f = M[i][k] / pv;
+      if (f === 0) continue;
+      for (let j = k; j < n; j++) M[i][j] -= f * M[k][j];
+      v[i] -= f * v[k];
+    }
+  }
+  const x = new Array(n);
+  for (let i = n-1; i >= 0; i--) {
+    let s = v[i];
+    for (let j = i+1; j < n; j++) s -= M[i][j] * x[j];
+    x[i] = s / M[i][i];
+  }
+  return x;
+}
+
+function inv2x2(a, b, c, d) {
+  const det = a*d - b*c;
+  return [[d/det, -b/det], [-c/det, a/det]];
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// SOIL PROFILE - editable table state
+// ───────────────────────────────────────────────────────────────────────
+// Each preset bundles soil + metocean + pile values so the scenario
+// stays consistent.  Editing any individual input after loading a
+// preset is fine; the user controls everything from there.
+const PRESETS = {
+  initial: {
+    label: 'Initial (DB Tables 10-1, 11-1)',
+    soil: [
+      [ 0.0,  1.0,'sand', 9.37, 38.0,   0, 164.2],
+      [ 1.0,  3.3,'sand', 9.37, 38.0,   0, 178.2],
+      [ 3.3,  9.0,'sand', 9.37, 37.0,   0, 212.5],
+      [ 9.0, 20.0,'sand', 9.37, 37.0,   0, 284.4],
+      [20.0, 21.0,'sand', 9.37, 37.0,   0, 336.0],
+      [21.0, 21.5,'sand', 9.37, 37.0,   0, 342.5],
+      [21.5, 24.0,'clay', 8.94,    0, 40.1, 262.4],
+      [24.0, 28.5,'clay', 8.94,    0, 42.0, 291.2],
+      [28.5, 36.0,'clay',11.67,    0,451.6, 694.7],
+      [36.0, 38.5,'sand', 9.23, 34.0,   0, 635.1],
+      [38.5, 50.0,'sand', 9.68, 36.0,   0,1110.0],
+    ],
+    Tp:    14.3,    // 50-yr (Table 10-1)
+    Tp_min:  9.5,   // THmax lower 1-yr → highest fp (Table 10-1)
+    Tp_max: 14.7,   // Tp 100-yr → lowest fp (Table 10-1)
+    U_curr:  1.56,  // 50-yr surface current (Table 10-4)
+    SWL_min:-2.71,  // 50-yr negative SWL (Table 10-3)
+    SWL_max: 3.16,  // 50-yr positive SWL (Table 10-3)
+    tmg:      0.090,// Table 5-2 above −40 mMSL
+    tmg_deep: 0.045,// Table 5-2 below −40 mMSL
+    L_emb: 28.4,    // from Appendix 1 drawings
+    Ls:    68.2,    // MP top +5 mMSL − mudline −63.2 mMSL
+    dw:    63.2,    // DB §5.1
+    z_taper_bot: 27.2,  // taper start at −36 mMSL
+    z_taper_top: 56.2,  // taper end at −7 mMSL
+  },
+  updated: {
+    label: 'Updated (DB Tables 12-1, 12-2, 12-3)',
+    soil: [
+      [ 0.0,  1.0,'sand', 9.37, 38.0,   0, 164.3],
+      [ 1.0,  2.8,'sand', 9.37, 38.0,   0, 176.3],
+      [ 2.8,  7.0,'sand', 9.37, 38.0,   0, 202.1],
+      [ 7.0,  9.0,'sand', 9.37, 37.0,   0, 226.7],
+      [ 9.0, 17.2,'sand', 9.37, 37.0,   0, 272.5],
+      [17.2, 21.0,'clay', 8.94,    0, 51.7, 232.3],
+      [21.0, 22.9,'clay', 8.94,    0, 63.2, 255.8],
+      [22.9, 24.0,'clay',11.67,    0,435.1, 591.0],
+      [24.0, 32.9,'clay',11.67,    0,545.1, 649.9],
+      [32.9, 35.2,'sand', 9.68, 32.0,   0, 923.2],
+      [35.2, 50.0,'clay',10.96,    0,673.0, 822.8],
+    ],
+    Tp:    12.9,    // 50-yr (Table 12-2)
+    Tp_min:  8.3,   // THmax lower 1-yr (Table 12-2)
+    Tp_max: 14.0,   // Tp 100-yr (Table 12-2)
+    U_curr:  1.56,  // currents not separately updated in DB §12
+    SWL_min:-2.71,
+    SWL_max: 3.16,
+    tmg:      0.150,// Table 12-3 above −40 mMSL
+    tmg_deep: 0.075,// Table 12-3 below −40 mMSL
+    L_emb: 28.4,    // no scour yet
+    Ls:    68.2,
+    dw:    63.2,
+    z_taper_bot: 27.2,
+    z_taper_top: 56.2,
+  },
+  scour: null,      // built below from 'updated' (top 4 m removed, L_emb -4)
+};
+PRESETS.scour = (() => {
+  const u = PRESETS.updated;
+  const soil = [];
+  for (const r of u.soil) {
+    if (r[1] <= 4.0) continue;
+    soil.push([Math.max(0, r[0] - 4.0), r[1] - 4.0, r[2], r[3], r[4], r[5], r[6]]);
+  }
+  return {
+    label:   'Updated + 4 m scour (DB §12.2)',
+    soil,
+    Tp:      u.Tp,
+    Tp_min:  u.Tp_min,
+    Tp_max:  u.Tp_max,
+    U_curr:  u.U_curr,
+    SWL_min: u.SWL_min,
+    SWL_max: u.SWL_max,
+    tmg:      u.tmg,
+    tmg_deep: u.tmg_deep,
+    L_emb:   Math.max(1, u.L_emb - 4),    // 28.4 → 24.4
+    Ls:      u.Ls + 4,                    // 68.2 → 72.2 (more pile exposed)
+    dw:      u.dw + 4,                    // 63.2 → 67.2 (deeper local mudline)
+    z_taper_bot: u.z_taper_bot + 4,       // taper shifts up in mudline coords
+    z_taper_top: u.z_taper_top + 4,
+  };
+})();
+
+function renderSoil(rows) {
+  const tb = document.getElementById('soil-tbody');
+  tb.innerHTML = '';
+  rows.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    const flds = [
+      `<input type="number" step="0.1"  value="${r[0]}" data-c="0">`,
+      `<input type="number" step="0.1"  value="${r[1]}" data-c="1">`,
+      `<select data-c="2">
+         <option value="sand"${r[2]==='sand'?' selected':''}>sand</option>
+         <option value="clay"${r[2]==='clay'?' selected':''}>clay</option>
+       </select>`,
+      `<input type="number" step="0.01" value="${r[3]}" data-c="3">`,
+      `<input type="number" step="0.1"  value="${r[4]}" data-c="4">`,
+      `<input type="number" step="0.1"  value="${r[5]}" data-c="5">`,
+      `<input type="number" step="1"    value="${r[6]}" data-c="6">`,
+      `<div class="row-btns"><button onclick="removeRow(${idx})">×</button></div>`,
+    ];
+    tr.innerHTML = flds.map(f => `<td>${f}</td>`).join('');
+    tb.appendChild(tr);
+  });
+  // wire change events
+  tb.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', compute);
+    el.addEventListener('change', compute);
+  });
+}
+function readSoil() {
+  const rows = [];
+  document.querySelectorAll('#soil-tbody tr').forEach(tr => {
+    const r = [];
+    tr.querySelectorAll('input, select').forEach(el => {
+      r[+el.dataset.c] = (el.tagName === 'SELECT') ? el.value : parseFloat(el.value);
+    });
+    rows.push(r);
+  });
+  return rows;
+}
+function addSoilRow() {
+  const rows = readSoil();
+  const last = rows[rows.length-1] || [0,1,'sand',9.5,36,0,200];
+  rows.push([last[1], last[1]+1, last[2], last[3], last[4], last[5], last[6]]);
+  renderSoil(rows);
+  compute();
+}
+function removeRow(idx) {
+  const rows = readSoil();
+  rows.splice(idx, 1);
+  renderSoil(rows);
+  compute();
+}
+function loadPreset(name) {
+  const p = PRESETS[name];
+  renderSoil(p.soil);
+  document.getElementById('Tp').value         = p.Tp;
+  document.getElementById('Tp_min').value     = p.Tp_min;
+  document.getElementById('Tp_max').value     = p.Tp_max;
+  document.getElementById('U_curr').value     = p.U_curr;
+  document.getElementById('SWL_min').value    = p.SWL_min;
+  document.getElementById('SWL_max').value    = p.SWL_max;
+  document.getElementById('tmg').value        = p.tmg;
+  document.getElementById('tmg_deep').value   = p.tmg_deep;
+  document.getElementById('L_emb').value      = p.L_emb;
+  document.getElementById('Ls').value         = p.Ls;
+  document.getElementById('dw').value         = p.dw;
+  document.getElementById('z_taper_bot').value = p.z_taper_bot;
+  document.getElementById('z_taper_top').value = p.z_taper_top;
+  // visual cue
+  document.querySelectorAll('.preset-row button').forEach(b => b.classList.remove('preset-active'));
+  const idx = ({initial:0, updated:1, scour:2})[name];
+  const btns = document.querySelectorAll('.preset-row button');
+  if (btns[idx]) btns[idx].classList.add('preset-active');
+  compute();
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// PISA 1D solver
+// ───────────────────────────────────────────────────────────────────────
+function pisaSolve(opts) {
+  const { D, t, L_emb, E_st, n_elem, soil, PISA, nu_sand, nu_clay } = opts;
+  const I_p = Math.PI/64 * (Math.pow(D, 4) - Math.pow(D - 2*t, 4));
+  const EI  = E_st * I_p;
+  const n_node = n_elem + 1;
+  const dz = L_emb / n_elem;
+  const z = new Array(n_node);
+  for (let i = 0; i < n_node; i++) z[i] = i * dz;
+
+  // per-node properties
+  const G0 = new Array(n_node);
+  const is_sand = new Array(n_node);
+  const lastL = soil[soil.length-1];
+  for (let i = 0; i < n_node; i++) {
+    const zi = z[i];
+    let L = null;
+    for (const r of soil) {
+      if (zi >= r[0] && zi < r[1]) { L = r; break; }
+    }
+    if (!L) L = lastL;
+    const E_i = L[6] * 1e6;   // MPa→Pa
+    const sand = (L[2] === 'sand');
+    is_sand[i] = sand;
+    const nu = sand ? nu_sand : nu_clay;
+    G0[i] = E_i / (2 * (1 + nu));
+  }
+  const kp = new Array(n_node), km = new Array(n_node);
+  for (let i = 0; i < n_node; i++) {
+    if (is_sand[i]) {
+      kp[i] = PISA.sand.kp * G0[i];
+      km[i] = PISA.sand.km * G0[i] * D * D;
+    } else {
+      kp[i] = PISA.clay.kp * G0[i];
+      km[i] = PISA.clay.km * G0[i] * D * D;
+    }
+  }
+  const tipSand = is_sand[n_node-1];
+  const kHB = (tipSand ? PISA.sand.kHB : PISA.clay.kHB) * G0[n_node-1] * D;
+  const kMB = (tipSand ? PISA.sand.kMB : PISA.clay.kMB) * G0[n_node-1] * Math.pow(D, 3);
+
+  // assemble K
+  const ndof = 2 * n_node;
+  const K = new Array(ndof);
+  for (let i = 0; i < ndof; i++) K[i] = new Array(ndof).fill(0);
+
+  // beam elements
+  const Le = dz;
+  const c = EI / (Le*Le*Le);
+  const Kb = [
+    [ 12*c,        6*Le*c,     -12*c,       6*Le*c     ],
+    [ 6*Le*c,      4*Le*Le*c,  -6*Le*c,     2*Le*Le*c  ],
+    [-12*c,       -6*Le*c,      12*c,      -6*Le*c     ],
+    [ 6*Le*c,      2*Le*Le*c,  -6*Le*c,     4*Le*Le*c  ],
+  ];
+  for (let e = 0; e < n_elem; e++) {
+    const d = [2*e, 2*e+1, 2*e+2, 2*e+3];
+    for (let ii = 0; ii < 4; ii++)
+      for (let jj = 0; jj < 4; jj++)
+        K[d[ii]][d[jj]] += Kb[ii][jj];
+  }
+  // distributed soil springs (lumped)
+  for (let i = 0; i < n_node; i++) {
+    const trib = (i === 0 || i === n_node-1) ? dz/2 : dz;
+    K[2*i  ][2*i  ] += kp[i] * trib;
+    K[2*i+1][2*i+1] += km[i] * trib;
+  }
+  // base concentrated springs
+  K[2*(n_node-1)  ][2*(n_node-1)  ] += kHB;
+  K[2*(n_node-1)+1][2*(n_node-1)+1] += kMB;
+
+  // mudline = node 0; apply unit F then unit M
+  const F1 = new Array(ndof).fill(0); F1[0] = 1;
+  const F2 = new Array(ndof).fill(0); F2[1] = 1;
+  const u1 = solve(K, F1);
+  const u2 = solve(K, F2);
+  const Khead = inv2x2(u1[0], u2[0], u1[1], u2[1]);
+  return {
+    K_lat: Khead[0][0],
+    K_rot: Khead[1][1],
+    K_coup: Khead[0][1],
+    EI, G0_top: G0[0], G0_tip: G0[n_node-1],
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// TOWER PROFILE - DB tower doc v1.0 §2 (each entry: z_local, OD m, wall m)
+// ───────────────────────────────────────────────────────────────────────
+const TOWER_DEFAULT = [
+  { z:   0, OD: 8.000, wall: 0.085 },
+  { z:  20, OD: 8.000, wall: 0.055 },
+  { z:  45, OD: 6.500, wall: 0.055 },
+  { z: 120, OD: 6.500, wall: 0.032 },
+  { z: 126, OD: 5.000, wall: 0.050 },
+];
+
+function renderTower(rows) {
+  const tb = document.getElementById('tower-tbody');
+  tb.innerHTML = '';
+  rows.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><input type="number" step="0.1"   value="${r.z}"           data-c="z"></td>` +
+      `<td><input type="number" step="0.01"  value="${r.OD}"          data-c="OD"></td>` +
+      `<td><input type="number" step="1"     value="${(r.wall*1000).toFixed(0)}" data-c="wall"></td>` +
+      `<td><div class="row-btns"><button onclick="removeTowerRow(${idx})">×</button></div></td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', compute);
+    el.addEventListener('change', compute);
+  });
+}
+function readTower() {
+  const rows = [];
+  document.querySelectorAll('#tower-tbody tr').forEach(tr => {
+    const r = {};
+    tr.querySelectorAll('input').forEach(el => {
+      const v = parseFloat(el.value);
+      if (el.dataset.c === 'wall') r.wall = v / 1000;   // mm → m
+      else r[el.dataset.c] = v;
+    });
+    rows.push(r);
+  });
+  return rows.sort((a, b) => a.z - b.z);
+}
+function addTowerRow() {
+  const rows = readTower();
+  const last = rows[rows.length-1] || { z: 0, OD: 8, wall: 0.085 };
+  rows.push({ z: last.z + 10, OD: last.OD, wall: last.wall });
+  renderTower(rows);
+  compute();
+}
+function removeTowerRow(idx) {
+  const rows = readTower();
+  rows.splice(idx, 1);
+  renderTower(rows);
+  compute();
+}
+function loadTowerDefault() {
+  renderTower(TOWER_DEFAULT.map(r => ({ ...r })));
+  compute();
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// NFA - stepped cantilever with PISA mudline springs
+//   * Stiffness:  k_str = 1 / δ_tip , δ_tip from double-integration of κ(z)
+//   * Modal mass: Rayleigh M_eq = M_RNA + ∫ m(z) ψ²(z) dz, ψ = δ/δ_tip
+//   * Foundation: 1/k_eq = 1/k_str + 1/K_lat + L²/K_rot
+//   * f₁        = (1/2π) √(k_eq / M_eq)
+// ───────────────────────────────────────────────────────────────────────
+function nfaSolve(opts) {
+  const { Ls, Da, ta, D_pile_bot, z_taper_bot, z_taper_top, towerRows,
+          E_st, rho_st, Mrna, dw, dw_msl, rho_w, rho_mg, tmg, tmg_deep,
+          K_lat, K_rot, Nb, rpm_min, rpm_max, Tp, m1P, m3P } = opts;
+
+  const Lt = towerRows[towerRows.length-1].z - towerRows[0].z;
+  const L  = Ls + Lt;
+  const N  = 401;                       // ~0.5 m resolution along cantilever
+  const dz = L / (N - 1);
+
+  // MG zone boundary in mudline coords (−40 mMSL elevation), fixed wrt MSL
+  const z_mg_split = dw_msl - 40;
+
+  // Above-mudline pile OD: D_pile_bot below taper, linear in taper, Da above
+  const tt = Math.max(z_taper_top, z_taper_bot);  // guard against tt < tb
+  function pileOD_above(zi) {
+    if (zi <= z_taper_bot) return D_pile_bot;
+    if (zi >= tt)          return Da;
+    const f = (zi - z_taper_bot) / (tt - z_taper_bot);
+    return D_pile_bot + f * (Da - D_pile_bot);
+  }
+
+  // Build per-node properties along z (mudline z=0 → hub z=L)
+  const z = new Array(N), EI = new Array(N), m_lin = new Array(N);
+  let towerSteelMass = 0, pileSteelMass = 0, addedMass = 0, mgMass = 0;
+
+  for (let i = 0; i < N; i++) {
+    z[i] = i * dz;
+    let D, t;
+    if (z[i] <= Ls) {
+      D = pileOD_above(z[i]);  t = ta;
+    } else {
+      // Interpolate linearly in tower profile
+      const zL = z[i] - Ls + towerRows[0].z;   // tower local elevation
+      let s = 0;
+      for (let k = 0; k < towerRows.length-1; k++) {
+        if (zL >= towerRows[k].z && zL <= towerRows[k+1].z) { s = k; break; }
+        if (zL > towerRows[towerRows.length-1].z) { s = towerRows.length-2; break; }
+      }
+      const p1 = towerRows[s], p2 = towerRows[s+1];
+      const f  = (zL - p1.z) / (p2.z - p1.z);
+      D = p1.OD   + f * (p2.OD   - p1.OD);
+      t = p1.wall + f * (p2.wall - p1.wall);
+    }
+    EI[i] = E_st * (Math.PI/64) * (Math.pow(D, 4) - Math.pow(D - 2*t, 4));
+
+    // Mass per unit length: steel + (added water + MG if submerged)
+    const m_steel = rho_st * (Math.PI/4) * (D*D - (D-2*t)*(D-2*t));
+    let m_water = 0, m_mg = 0;
+    if (z[i] < dw) {                                  // submerged
+      const tmg_i = (z[i] >= z_mg_split) ? tmg : tmg_deep;   // DB Table 5-2 / 12-3
+      const Dsub = D + 2*tmg_i;
+      m_water = rho_w  * (Math.PI/4) * Dsub*Dsub;
+      m_mg    = rho_mg * (Math.PI/4) * (Dsub*Dsub - D*D);
+    }
+    m_lin[i] = m_steel + m_water + m_mg;
+
+    // Bookkeeping for display (trapezoidal weights)
+    const trib = (i === 0 || i === N-1) ? dz/2 : dz;
+    if (z[i] <= Ls) pileSteelMass += m_steel * trib;
+    else            towerSteelMass += m_steel * trib;
+    addedMass += m_water * trib;
+    mgMass    += m_mg    * trib;
+  }
+
+  // Apply unit tip force; M(z) = L - z
+  const Mz    = z.map(zi => L - zi);
+  const kappa = Mz.map((Mi, i) => Mi / EI[i]);
+
+  // Integrate twice (trapezoidal) for slope θ and deflection δ, base fixed
+  const theta = new Array(N).fill(0);
+  for (let i = 1; i < N; i++) theta[i] = theta[i-1] + 0.5*(kappa[i-1]+kappa[i])*dz;
+  const delta = new Array(N).fill(0);
+  for (let i = 1; i < N; i++) delta[i] = delta[i-1] + 0.5*(theta[i-1]+theta[i])*dz;
+
+  const delta_tip = delta[N-1];
+  const k_str = 1 / delta_tip;
+
+  // Mode shape from static deflection; M_eq via Rayleigh integral
+  const psi = delta.map(d => d / delta_tip);
+  let m_int = 0;
+  for (let i = 0; i < N; i++) {
+    const trib = (i === 0 || i === N-1) ? dz/2 : dz;
+    m_int += m_lin[i] * psi[i] * psi[i] * trib;
+  }
+  const meq = Mrna + m_int;                          // RNA at tip with ψ=1
+
+  // Combined stiffness in series with PISA mudline springs
+  const keq = 1 / (1/k_str + 1/K_lat + (L*L)/K_rot);
+  const f1  = (1/(2*Math.PI)) * Math.sqrt(keq / meq);
+
+  // Forcing frequencies / margins / verdict
+  const f1P = rpm_max / 60;
+  const f3P = Nb * rpm_min / 60;
+  const fp  = 1 / Tp;
+  const margin1P = (f1 - f1P) / f1P;
+  const margin3P = (f3P - f1) / f3P;
+  let verdict = 'pass';
+  if (margin1P < 0 || margin3P < 0) verdict = 'fail';
+  else if (margin1P < m1P || margin3P < m3P) verdict = 'warn';
+
+  const m_dist = pileSteelMass + towerSteelMass + addedMass + mgMass;
+  return {
+    f1, f1P, f3P, fp, meq, m_dist, k_str, keq, margin1P, margin3P, verdict,
+    L, Lt,
+    pileSteelMass, towerSteelMass, addedMass, mgMass,
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// DRIVE - read UI, run both solvers, render
+// ───────────────────────────────────────────────────────────────────────
+function v(id) { return parseFloat(document.getElementById(id).value); }
+function fmt(x, n = 3) {
+  if (!isFinite(x)) return '-';
+  if (Math.abs(x) >= 1e6 || (Math.abs(x) < 1e-3 && x !== 0)) return x.toExponential(n);
+  return x.toFixed(n);
+}
+function compute() {
+  const PISA = {
+    sand: { kp: v('kp_sand'), km: v('km_sand'), kHB: v('kHB_sand'), kMB: v('kMB_sand') },
+    clay: { kp: v('kp_clay'), km: v('km_clay'), kHB: v('kHB_clay'), kMB: v('kMB_clay') },
+  };
+  const pisaIn = {
+    D: v('D_emb'), t: v('t_emb'), L_emb: v('L_emb'),
+    E_st: v('E_st'), n_elem: Math.max(10, Math.round(v('n_elem'))),
+    soil: readSoil(), PISA,
+    nu_sand: v('nu_sand'), nu_clay: v('nu_clay'),
+  };
+  let p;
+  try { p = pisaSolve(pisaIn); }
+  catch (e) {
+    document.getElementById('r_klat').textContent = 'error';
+    document.getElementById('r_krot').textContent = 'error';
+    console.error(e);
+    return;
+  }
+
+  // PISA card
+  document.getElementById('r_klat').textContent  = (p.K_lat/1e9).toFixed(2) + ' GN/m';
+  document.getElementById('r_klat_sub').textContent = p.K_lat.toExponential(3) + ' N/m';
+  document.getElementById('r_krot').textContent  = (p.K_rot/1e9).toFixed(1) + ' GN·m/rad';
+  document.getElementById('r_krot_sub').textContent = p.K_rot.toExponential(3) + ' N·m/rad';
+  document.getElementById('r_kcoup').textContent = (p.K_coup/1e9).toFixed(2) + ' GN/rad';
+  document.getElementById('r_EI').textContent    = p.EI.toExponential(3) + ' N·m²';
+  document.getElementById('r_G0').textContent    = `G₀: ${(p.G0_top/1e6).toFixed(0)} → ${(p.G0_tip/1e6).toFixed(0)} MPa`;
+
+  // ±20 % sensitivity
+  const factors = [0.80, 1.20];
+  const sens = factors.map(f => {
+    const PISAf = {
+      sand: { kp: PISA.sand.kp*f, km: PISA.sand.km*f, kHB: PISA.sand.kHB*f, kMB: PISA.sand.kMB*f },
+      clay: { kp: PISA.clay.kp*f, km: PISA.clay.km*f, kHB: PISA.clay.kHB*f, kMB: PISA.clay.kMB*f },
+    };
+    return pisaSolve({ ...pisaIn, PISA: PISAf });
+  });
+  document.getElementById('r_sens').innerHTML =
+    `K_lat: ${(sens[0].K_lat/1e9).toFixed(2)} → ${(sens[1].K_lat/1e9).toFixed(2)} GN/m, ` +
+    `K_rot: ${(sens[0].K_rot/1e9).toFixed(0)} → ${(sens[1].K_rot/1e9).toFixed(0)} GN·m/rad`;
+
+  // NFA -- baseline (SWL = MSL, single Tp)
+  const dw_msl = v('dw');
+  const nfaIn = {
+    Ls: v('Ls'), Da: v('D_above'), ta: v('t_above'),
+    D_pile_bot: v('D_pile_bot'),
+    z_taper_bot: v('z_taper_bot'), z_taper_top: v('z_taper_top'),
+    towerRows: readTower(),
+    E_st: v('E_st'), rho_st: v('rho_st'),
+    Mrna: v('Mrna'),
+    dw: dw_msl, dw_msl,
+    rho_w: v('rho_w'), rho_mg: v('rho_mg'),
+    tmg: v('tmg'), tmg_deep: v('tmg_deep'),
+    K_lat: p.K_lat, K_rot: p.K_rot,
+    Nb: v('Nb'), rpm_min: v('rpm_min'), rpm_max: v('rpm_max'),
+    Tp: v('Tp'),
+    m1P: v('m1P')/100, m3P: v('m3P')/100,
+  };
+  const n = nfaSolve(nfaIn);
+
+  // SWL envelope: rerun NFA at +/- 50-yr SWL extremes
+  const swl_min = v('SWL_min');
+  const swl_max = v('SWL_max');
+  const n_lowSWL  = nfaSolve({ ...nfaIn, dw: nfaIn.dw + swl_min });    // less water → less added mass → higher f1
+  const n_highSWL = nfaSolve({ ...nfaIn, dw: nfaIn.dw + swl_max });    // more water → more added mass → lower f1
+  const f1_lo = Math.min(n.f1, n_lowSWL.f1, n_highSWL.f1);
+  const f1_hi = Math.max(n.f1, n_lowSWL.f1, n_highSWL.f1);
+
+  // Wave fp band (from THmax range)
+  const Tp_minS = v('Tp_min'), Tp_maxS = v('Tp_max');
+  const fp_band_hi = 1 / Tp_minS;   // shortest period -> highest freq
+  const fp_band_lo = 1 / Tp_maxS;   // longest period  -> lowest freq
+
+  // VIV (Strouhal): use surface current and above-mudline pile OD
+  const U  = v('U_curr'), St = v('St'), D_VIV = v('D_above');
+  const fs_VIV = St * U / D_VIV;
+
+  // Worst-case margins across SWL envelope
+  const worst_m1P = (f1_lo - n.f1P) / n.f1P;
+  const worst_m3P = (n.f3P - f1_hi) / n.f3P;
+  let verdict = 'pass';
+  if (worst_m1P < 0 || worst_m3P < 0) verdict = 'fail';
+  else if (worst_m1P < nfaIn.m1P || worst_m3P < nfaIn.m3P) verdict = 'warn';
+
+  // Extra checks: VIV & wave-band proximity to f1 (within ±10%)
+  const close = (a, b) => Math.abs((a-b)/b) < 0.10;
+  const extraNotes = [];
+  if (fs_VIV > n.f1P && fs_VIV < n.f3P) {
+    extraNotes.push(`VIV fs = ${fs_VIV.toFixed(3)} Hz lies inside the soft-stiff window - investigate further`);
+    if (verdict === 'pass') verdict = 'warn';
+  } else if (close(fs_VIV, f1_lo) || close(fs_VIV, f1_hi)) {
+    extraNotes.push(`VIV fs = ${fs_VIV.toFixed(3)} Hz is within 10% of f₁ - investigate`);
+    if (verdict === 'pass') verdict = 'warn';
+  }
+  if (fp_band_hi > n.f1P && fp_band_lo < n.f3P) {
+    extraNotes.push(`Wave fp band [${fp_band_lo.toFixed(3)}–${fp_band_hi.toFixed(3)}] Hz overlaps the soft-stiff window`);
+    if (verdict === 'pass') verdict = 'warn';
+  }
+
+  // Result cards - primary
+  document.getElementById('r_f1').textContent  = n.f1.toFixed(3) + ' Hz';
+  document.getElementById('r_f1_sub').textContent = `period ${(1/n.f1).toFixed(2)} s`;
+  document.getElementById('r_1P').textContent = n.f1P.toFixed(3) + ' Hz';
+  document.getElementById('r_3P').textContent = n.f3P.toFixed(3) + ' Hz';
+  document.getElementById('r_meq').textContent = (n.meq/1000).toFixed(0) + ' t';
+  const m1card = document.getElementById('r_m1P');
+  const m3card = document.getElementById('r_m3P');
+  m1card.textContent = (worst_m1P*100).toFixed(1) + ' %';
+  m3card.textContent = (worst_m3P*100).toFixed(1) + ' %';
+  m1card.className = 'value ' + (worst_m1P < 0 ? 'fail' : (worst_m1P < nfaIn.m1P ? 'warn' : 'pass'));
+  m3card.className = 'value ' + (worst_m3P < 0 ? 'fail' : (worst_m3P < nfaIn.m3P ? 'warn' : 'pass'));
+  document.getElementById('r_m1P_sub').textContent = `worst-case across SWL; req ${(nfaIn.m1P*100).toFixed(0)}%`;
+  document.getElementById('r_m3P_sub').textContent = `worst-case across SWL; req ${(nfaIn.m3P*100).toFixed(0)}%`;
+
+  // Result cards - extra (SWL envelope, wave band, VIV)
+  document.getElementById('r_f1env').textContent = `${f1_lo.toFixed(3)} → ${f1_hi.toFixed(3)} Hz`;
+  document.getElementById('r_f1env_sub').textContent =
+      `SWL ${swl_min.toFixed(2)} to +${swl_max.toFixed(2)} mMSL`;
+  document.getElementById('r_fpband').textContent = `${fp_band_lo.toFixed(3)} → ${fp_band_hi.toFixed(3)} Hz`;
+  document.getElementById('r_fpband_sub').textContent = `Tp ${Tp_maxS}–${Tp_minS} s`;
+  document.getElementById('r_viv').textContent = fs_VIV.toFixed(3) + ' Hz';
+  document.getElementById('r_viv_sub').textContent = `St=${St}, U=${U} m/s, D=${D_VIV} m`;
+
+  // Verdict text
+  const vb = document.getElementById('verdict-bar');
+  vb.className = 'verdict-bar ' + verdict;
+  const baseTxt = {
+    pass: '✓ PASS - f₁ envelope inside soft-stiff window with required margins',
+    warn: '⚠ MARGINAL - see notes below',
+    fail: '✗ FAIL - f₁ envelope falls inside a forcing band',
+  }[verdict];
+  vb.innerHTML = baseTxt + (extraNotes.length
+      ? '<br><span style="font-weight:400; font-size:12.5px;">• ' + extraNotes.join('<br>• ') + '</span>'
+      : '');
+
+  // Diagram
+  drawBands({
+    f1: n.f1, f1_lo, f1_hi, f1P: n.f1P, f3P: n.f3P,
+    fp: n.fp, fp_band_lo, fp_band_hi, fs_VIV,
+    rpm_min: nfaIn.rpm_min, rpm_max: nfaIn.rpm_max, Nb: nfaIn.Nb,
+  });
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// SVG band diagram
+// ───────────────────────────────────────────────────────────────────────
+function drawBands(d) {
+  const svg = document.getElementById('freq-svg');
+  const W = 800, H = 130;
+  const xmin = 0, xmax = 0.6;       // Hz
+  const padL = 50, padR = 20, padT = 18, padB = 30;
+  const x = f => padL + (f - xmin) / (xmax - xmin) * (W - padL - padR);
+
+  let out = '';
+  // axis line
+  out += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#2a3340"/>`;
+  // ticks
+  for (let f = 0; f <= 0.6; f += 0.1) {
+    const xt = x(f);
+    out += `<line x1="${xt}" y1="${H-padB}" x2="${xt}" y2="${H-padB+5}" stroke="#2a3340"/>`;
+    out += `<text x="${xt}" y="${H-padB+18}" fill="#8a94a3" font-size="11" text-anchor="middle">${f.toFixed(1)}</text>`;
+  }
+  out += `<text x="${W-padR}" y="${H-padB-6}" fill="#8a94a3" font-size="11" text-anchor="end">Hz</text>`;
+
+  // 1P (single line if cut-in = rated, otherwise a band)
+  const f1Pa = d.rpm_min / 60, f1Pb = d.rpm_max / 60;
+  const f1Pw = Math.abs(f1Pb - f1Pa);
+  if (f1Pw < 1e-4) {
+    // collapsed → draw as solid vertical line
+    out += `<line x1="${x(f1Pa)}" y1="${padT}" x2="${x(f1Pa)}" y2="${H-padB}" `
+         + `stroke="#f25c5c" stroke-width="3"/>`;
+    out += `<text x="${x(f1Pa)}" y="${padT-4}" fill="#f25c5c" font-size="10" text-anchor="middle" font-weight="600">1P</text>`;
+  } else {
+    out += `<rect x="${x(f1Pa)}" y="${padT}" width="${x(f1Pb)-x(f1Pa)}" height="${H-padB-padT}" `
+         + `fill="rgba(242,92,92,0.4)" stroke="#f25c5c" stroke-width="1"/>`;
+    out += `<text x="${(x(f1Pa)+x(f1Pb))/2}" y="${padT-4}" fill="#f25c5c" font-size="10" text-anchor="middle">1P band</text>`;
+  }
+  // 3P (same logic)
+  const f3Pa = d.Nb*d.rpm_min/60, f3Pb = d.Nb*d.rpm_max/60;
+  const f3Pw = Math.abs(f3Pb - f3Pa);
+  if (f3Pw < 1e-4) {
+    out += `<line x1="${x(f3Pa)}" y1="${padT}" x2="${x(f3Pa)}" y2="${H-padB}" `
+         + `stroke="#f5a623" stroke-width="3"/>`;
+    out += `<text x="${x(f3Pa)}" y="${padT-4}" fill="#f5a623" font-size="10" text-anchor="middle" font-weight="600">3P</text>`;
+  } else {
+    out += `<rect x="${x(f3Pa)}" y="${padT}" width="${x(f3Pb)-x(f3Pa)}" height="${H-padB-padT}" `
+         + `fill="rgba(245,166,35,0.4)" stroke="#f5a623" stroke-width="1"/>`;
+    out += `<text x="${(x(f3Pa)+x(f3Pb))/2}" y="${padT-4}" fill="#f5a623" font-size="10" text-anchor="middle">3P band</text>`;
+  }
+  // design-basis target window 0.129 – 0.387 (drawn last among bands so it sits over them)
+  out += `<rect x="${x(0.129)}" y="${padT+18}" width="${x(0.387)-x(0.129)}" height="${H-padB-padT-36}" `
+       + `fill="rgba(78,161,255,0.08)" stroke="#4ea1ff" stroke-width="1" stroke-dasharray="3,3"/>`;
+
+  // Wave fp band (Tp_min to Tp_max → fp_hi to fp_lo)
+  if (d.fp_band_lo && d.fp_band_hi && d.fp_band_hi > d.fp_band_lo) {
+    out += `<rect x="${x(d.fp_band_lo)}" y="${padT+24}" width="${x(d.fp_band_hi)-x(d.fp_band_lo)}" height="${H-padB-padT-48}" `
+         + `fill="rgba(136,136,136,0.18)" stroke="#888" stroke-width="1" stroke-dasharray="2,2"/>`;
+    out += `<text x="${(x(d.fp_band_lo)+x(d.fp_band_hi))/2}" y="${padT+34}" fill="#aaa" font-size="10" text-anchor="middle">wave f_p band</text>`;
+  }
+
+  // VIV (Strouhal) marker - teal dotted line
+  if (d.fs_VIV) {
+    out += `<line x1="${x(d.fs_VIV)}" y1="${padT+18}" x2="${x(d.fs_VIV)}" y2="${H-padB}" `
+         + `stroke="#2dd4bf" stroke-width="2" stroke-dasharray="4,2"/>`;
+    out += `<text x="${x(d.fs_VIV)+3}" y="${H-padB-4}" fill="#2dd4bf" font-size="10">VIV ${d.fs_VIV.toFixed(3)} Hz</text>`;
+  }
+
+  // f1 envelope (low → high) as a thick blue bar with markers at the ends
+  if (d.f1_lo && d.f1_hi && d.f1_hi > d.f1_lo) {
+    out += `<line x1="${x(d.f1_lo)}" y1="${padT+10}" x2="${x(d.f1_hi)}" y2="${padT+10}" `
+         + `stroke="#4ea1ff" stroke-width="3"/>`;
+    out += `<line x1="${x(d.f1_lo)}" y1="${padT+5}" x2="${x(d.f1_lo)}" y2="${padT+15}" stroke="#4ea1ff" stroke-width="2"/>`;
+    out += `<line x1="${x(d.f1_hi)}" y1="${padT+5}" x2="${x(d.f1_hi)}" y2="${padT+15}" stroke="#4ea1ff" stroke-width="2"/>`;
+  }
+
+  // f1 (baseline SWL) - main marker, full height
+  out += `<line x1="${x(d.f1)}" y1="${padT-2}" x2="${x(d.f1)}" y2="${H-padB+2}" `
+       + `stroke="#4ea1ff" stroke-width="2.5"/>`;
+  out += `<text x="${x(d.f1)}" y="${padT-4}" fill="#4ea1ff" font-size="11" text-anchor="middle" font-weight="600">`
+       + `f₁ = ${d.f1.toFixed(3)} Hz</text>`;
+
+  svg.innerHTML = out;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// INIT
+// ───────────────────────────────────────────────────────────────────────
+renderTower(TOWER_DEFAULT.map(r => ({ ...r })));
+loadPreset('initial');
+// re-fire compute on any input change
+document.querySelectorAll('input').forEach(el => {
+  el.addEventListener('input', compute);
+  el.addEventListener('change', compute);
+});
+compute();
+</script>
+</body>
+</html>
