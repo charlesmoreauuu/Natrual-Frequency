@@ -140,6 +140,7 @@
     flex-shrink: 0;
   }
   .freq-legend sub { font-size: 0.85em; line-height: 0; vertical-align: baseline; }
+  .comp-svg { width: 100%; background: var(--panel2); border-radius: 6px; margin-top: 8px; }
   .layout {
     display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
   }
@@ -156,6 +157,12 @@
   .preset-row button.preset-active {
     background: var(--accent); color: #fff; border-color: var(--accent);
   }
+  .export-btn {
+    font-size: 11px; padding: 3px 9px;
+    float: right; margin-top: -2px;
+    color: var(--muted); border-color: var(--line);
+  }
+  .export-btn:hover { color: var(--accent); border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -254,6 +261,8 @@
       <div class="field"><label>Taper start (z above mudline)</label><input id="z_taper_bot" value="27.2"><span class="unit">m</span></div>
       <div class="field"><label>Taper end (z above mudline)</label><input id="z_taper_top" value="56.2"><span class="unit">m</span></div>
       <div class="field"><label>RNA mass</label><input id="Mrna" value="818000"><span class="unit">kg</span></div>
+      <div class="field"><label>RNA I fore-aft (Ixx)</label><input id="I_fa" value="150000"><span class="unit">tm²</span></div>
+      <div class="field"><label>RNA I side-to-side (Iyy)</label><input id="I_ss" value="264000"><span class="unit">tm²</span></div>
     </div>
     <div class="note">
       Above-mudline pile OD: constant at OD@mudline below taper start, linear taper to OD@MP top
@@ -349,10 +358,19 @@
     <div class="note">
       ±20 % sensitivity on PISA k* coefficients: <span id="r_sens">-</span>
     </div>
+    <div class="note" style="margin-top:8px;">
+      <b>Foundation stiffness override</b> — Frank's PY curves (Plaxis).
+      Set to 0 to fall back to PISA above.
+      <div class="grid" style="margin-top:8px;">
+        <div class="field"><label>K_lat override</label><input id="K_lat_ov" value="0"><span class="unit">GN/m</span></div>
+        <div class="field"><label>K_rot override</label><input id="K_rot_ov" value="0"><span class="unit">GN·m/rad</span></div>
+      </div>
+      <div id="stiff_source" style="margin-top:6px; font-size:12px; font-weight:600;"></div>
+    </div>
   </div>
 
   <div class="panel">
-    <h2>NFA - first natural frequency and soft-stiff check</h2>
+    <h2>NFA - first natural frequency and soft-stiff check<button class="export-btn" onclick="exportChart('freq-svg','freq_bands')">↓ PNG</button></h2>
     <div class="results">
       <div class="result-card">
         <div class="label">f₁</div>
@@ -399,14 +417,46 @@
         <div class="value" id="r_viv">-</div>
         <div class="sub" id="r_viv_sub">-</div>
       </div>
+      <div class="result-card">
+        <div class="label">f₁ fore-aft</div>
+        <div class="value" id="r_f1_fa">-</div>
+        <div class="sub" id="r_f1_fa_sub">incl. RNA Ixx rotary inertia</div>
+      </div>
+      <div class="result-card">
+        <div class="label">f₁ side-to-side</div>
+        <div class="value" id="r_f1_ss">-</div>
+        <div class="sub" id="r_f1_ss_sub">incl. RNA Iyy rotary inertia</div>
+      </div>
+      <div class="result-card">
+        <div class="label">±5% DNV band</div>
+        <div class="value" id="r_f1_band">-</div>
+        <div class="sub">§3.6.2.5 — both ends must clear 1P/3P margins</div>
+      </div>
+      <div class="result-card">
+        <div class="label">f₂ — 2nd mode</div>
+        <div class="value" id="r_f2">-</div>
+        <div class="sub" id="r_f2_sub">eigenvalue solver, no rotary inertia</div>
+      </div>
+      <div class="result-card">
+        <div class="label">f₃ — 3rd mode</div>
+        <div class="value" id="r_f3">-</div>
+        <div class="sub" id="r_f3_sub">eigenvalue solver, no rotary inertia</div>
+      </div>
+      <div class="result-card">
+        <div class="label">DNV §3.6.2.3</div>
+        <div class="value" id="r_dnv3623">-</div>
+        <div class="sub">f₂ must be ≥ 1.2 × 3P = ${(0.387*1.2).toFixed(3)} Hz</div>
+      </div>
     </div>
     <div class="verdict-bar" id="verdict-bar">-</div>
 
-    <svg class="freq-svg" id="freq-svg" viewBox="0 0 800 130"></svg>
+    <svg class="freq-svg" id="freq-svg" viewBox="0 0 800 200" style="height:200px;"></svg>
     <div class="freq-legend">
       <span><i style="background:#f25c5c;"></i> 1P (rotor)</span>
       <span><i style="background:#f5a623;"></i> 3P (blade-passing)</span>
-      <span><i style="background:rgba(78,161,255,0.6);"></i> f₁ (with envelope bar = SWL range)</span>
+      <span><i style="background:#4ea1ff;"></i> f₁ fore-aft (incl. Ixx)</span>
+      <span><i style="background:#a78bfa;"></i> f₁ side-to-side (incl. Iyy)</span>
+      <span><i style="background:rgba(78,161,255,0.15); border:1px dashed #4ea1ff;"></i> ±5% DNV §3.6.2.5</span>
       <span><i style="background:rgba(78,161,255,0.18); border:1px solid #4ea1ff;"></i> DB target [0.129, 0.387] Hz</span>
       <span><i style="background:rgba(136,136,136,0.4);"></i> wave f<sub>p</sub> band</span>
       <span><i style="background:#2dd4bf;"></i> VIV f<sub>s</sub></span>
@@ -414,35 +464,63 @@
   </div>
 
   <div class="panel">
+    <h2>Modal analysis — bending mode shapes<button class="export-btn" onclick="exportChart('mode-svg','mode_shapes')">↓ PNG</button></h2>
+    <div class="note" style="margin-bottom:8px;">
+      Generalized eigenvalue problem K·φ = ω²·M·φ on a 60-element Euler-Bernoulli beam with
+      consistent mass matrix.  Foundation springs and RNA mass included.
+      Solved by inverse iteration with M-orthogonal deflation.
+    </div>
+    <svg class="freq-svg" id="mode-svg" viewBox="0 0 800 340" style="height:340px;"></svg>
+    <div class="freq-legend" style="margin-top:6px;">
+      <span><i style="background:#4ea1ff;"></i> Mode 1 (f₁)</span>
+      <span><i style="background:#2ecc71;"></i> Mode 2 (f₂)</span>
+      <span><i style="background:#f5a623;"></i> Mode 3 (f₃)</span>
+    </div>
+  </div>
+
+  <div class="panel">
     <h2>Methodology</h2>
     <div class="note">
       <b>PISA.</b> Four-component Winkler model (distributed lateral p, distributed moment m,
-      base shear H_B, base moment M_B) linearised at zero displacement.  Pile = Euler-Bernoulli beam,
-      N elements.  Soil distributed springs lumped at nodes by tributary length.  Base springs
-      concentrated at the pile-tip node.  Mudline stiffness extracted by applying unit force and
-      unit moment at the head, inverting the resulting 2×2 flexibility.
+      base shear H_B, base moment M_B) linearised at zero displacement per DNV-ST-0126 §3.6.2.4
+      (elastic soil behaviour).  Pile = Euler-Bernoulli beam, N elements.  Soil distributed springs
+      lumped at nodes by tributary length.  Base springs concentrated at the pile-tip node.
+      Mudline stiffness extracted by applying unit force and unit moment at the head, inverting
+      the resulting 2×2 flexibility matrix.  Nominal coefficients: Dunkirk dense sand
+      (Burd et al. 2020), Cowden stiff till (Byrne et al. 2020).
       <br><br>
-      <b>NFA.</b> Stepped cantilever from mudline to hub.  Above-mudline pile = 1 segment;
-      tower = N segments interpolated from the DB tower doc profile (section 4 above).
-      Per-node EI and mass per unit length computed at ~0.5 m resolution.
+      <b>NFA — first mode (Rayleigh).</b> Stepped cantilever from mudline to hub per DNV-ST-0126
+      §3.6.2.  Above-mudline pile = 1 segment; tower = N segments from DB tower profile.
+      Per-node EI and mass per unit length at ~0.5 m resolution.
       Stiffness: k_str = 1/δ_tip, where δ_tip is from double-integration of curvature
-      κ(z) = M(z)/EI(z) under a unit tip force (proper stepped-beam result, not length-weighted EI).
-      Modal mass via Rayleigh: M_eq = M_RNA + ∫ m(z) ψ²(z) dz, with ψ = δ/δ_tip
-      (static-deflection mode shape - energy-consistent, replaces 33/140 × m_dist).
-      Added hydrodynamic mass ρ_w × π/4 × D² and marine growth mass applied over submerged length.
-      Series compliance with PISA mudline springs: 1/k_eq = 1/k_str + 1/K_lat + L²/K_rot.
+      κ(z) = M(z)/EI(z) under a unit tip force (proper stepped-beam result).
+      Modal mass via Rayleigh: M_eq = M_RNA + I_RNA × (θ_tip/δ_tip)² + ∫ m(z) ψ²(z) dz,
+      with ψ = δ/δ_tip.  I_RNA is Ixx (fore-aft) or Iyy (side-to-side) from Table 9-1.
+      Added hydrodynamic mass ρ_w × π/4 × D_sub² (Ca = 1.0) and marine growth mass over
+      submerged length, where D_sub = D + 2 × t_mg.
+      Series compliance with foundation springs: 1/k_eq = 1/k_str + 1/K_lat + L²/K_rot.
       f₁ = (1/2π) √(k_eq / M_eq).
+      <br>
+      <b>NFA — higher modes (eigenvalue).</b> 60-element Euler-Bernoulli beam; consistent mass
+      matrix; foundation springs at base; RNA translational mass at tip (rotary inertia not
+      included in higher modes).  Solved by inverse iteration with M-orthogonal deflation.
+      DNV §3.6.2.3 requires the highest computed mode ≥ 1.2 × 3P = 0.464 Hz.
       <br><br>
-      <b>SWL envelope.</b> NFA is recomputed at the 50-yr positive and negative still-water levels
-      (Table 10-3); margins use the worst-case f₁ - lowest f₁ versus 1P, highest f₁ versus 3P.
+      <b>Resonance margins.</b> DNV-ST-0126 §3.6.2.2: f<sub>R</sub>/f<sub>0,n</sub> ≤ 0.95
+      or ≥ 1.05 (5 % minimum).  Natural frequencies varied by ±5 % per §3.6.2.5 to account
+      for mass/stiffness uncertainties; both bounds must satisfy the margin requirement.
       <br>
-      <b>Wave f<sub>p</sub> band.</b> Period band from T<sub>min</sub> (THmax lower at 1-yr)
-      to T<sub>max</sub> (T<sub>p</sub> at 100-yr) per Table 10-1.  Overlap with the soft-stiff window
-      triggers a warning.
+      <b>SWL envelope.</b> NFA is recomputed at the 50-yr positive (+3.16 m) and negative
+      (−2.71 m) still-water levels (Table 10-3); margins use worst-case f₁ across the envelope.
       <br>
-      <b>VIV check.</b> Strouhal vortex-shedding frequency f<sub>s</sub> = St × U / D, with U = 50-yr
-      surface current (Table 10-4) and D = above-mudline pile OD.  Required by DNV-ST-0126 §3.6.3.
-      f<sub>s</sub> within ±10 % of f₁, or inside the soft-stiff window, triggers a warning.
+      <b>Wave f<sub>p</sub> band.</b> Period band from T<sub>min</sub> (T<sub>Hmax,lower</sub>
+      at 1-yr return) to T<sub>max</sub> (T<sub>p</sub> at 100-yr return) per Table 10-1/12-2.
+      Overlap with the soft-stiff window triggers a warning.
+      <br>
+      <b>VIV check.</b> Strouhal vortex-shedding frequency f<sub>s</sub> = St × U / D, with
+      U = 50-yr surface current (Table 10-4) and D = above-mudline pile OD at waterline.
+      Required by DNV-ST-0126 §3.6.2.6 and §3.6.3.3.  f<sub>s</sub> within ±10 % of f₁,
+      or inside the soft-stiff window, triggers a warning.
     </div>
   </div>
 
@@ -450,7 +528,45 @@
 
 </div>
 
+<!-- FULL-WIDTH COMPARISON PANEL -->
+<div class="panel" style="margin-top:14px;">
+  <h2>Scenario comparison — original vs updated vs scour<button class="export-btn" onclick="exportChart('comp-svg','scenario_comparison')">↓ PNG</button></h2>
+  <div class="note" style="margin-bottom:10px;">
+    Runs all three presets (Initial / Updated / Updated + 4 m scour) using current structural and rotor
+    parameters. Updates automatically. Diamonds = f₁ at MSL; horizontal bars = SWL envelope range.
+  </div>
+  <svg class="comp-svg" id="comp-svg" viewBox="0 0 800 202"></svg>
+  <div class="freq-legend" style="margin-top:6px;">
+    <span><i style="background:#4ea1ff;"></i> Initial state</span>
+    <span><i style="background:#2ecc71;"></i> Updated state</span>
+    <span><i style="background:#f5a623;"></i> Updated + 4 m scour</span>
+    <span><i style="background:rgba(242,92,92,0.12); border:1px solid rgba(242,92,92,0.5);"></i> Soft-soft (&lt;1P)</span>
+    <span><i style="background:rgba(46,204,113,0.12); border:1px solid rgba(46,204,113,0.5);"></i> Soft-stiff (target)</span>
+    <span><i style="background:rgba(245,166,35,0.12); border:1px solid rgba(245,166,35,0.5);"></i> Stiff-stiff (&gt;3P)</span>
+  </div>
+</div>
+
+<!-- FULL-WIDTH JONSWAP PANEL -->
+<div class="panel" style="margin-top:14px;">
+  <h2>JONSWAP wave spectrum — excitation vs natural frequency<button class="export-btn" onclick="exportChart('jonswap-svg','jonswap_spectrum')">↓ PNG</button></h2>
+  <div class="note" style="margin-bottom:10px;">
+    JONSWAP spectrum (γ = 3.3, DNV-RP-C205 §3.5.5) for the initial and updated sea states.
+    Normalised so peak = 1. Shows where wave energy is concentrated relative to f₁, 1P, and 3P.
+  </div>
+  <svg class="comp-svg" id="jonswap-svg" viewBox="0 0 800 234" style="height:234px;"></svg>
+  <div class="freq-legend" style="margin-top:6px;">
+    <span><i style="background:#4ea1ff;"></i> Initial sea state (Tₚ = 14.3 s)</span>
+    <span><i style="background:#2ecc71; opacity:0.8;"></i> Updated sea state (Tₚ = 12.9 s)</span>
+    <span><i style="background:#fff;"></i> f₁ (natural frequency)</span>
+    <span><i style="background:#f25c5c;"></i> 1P</span>
+    <span><i style="background:#f5a623;"></i> 3P</span>
+  </div>
+</div>
+
 <script>
+// Cache of raw SVG inner content for export — avoids DOM serialisation issues
+const _svgCache = {};
+
 // ───────────────────────────────────────────────────────────────────────
 // LINEAR ALGEBRA - small dense Gaussian elimination with partial pivot
 // ───────────────────────────────────────────────────────────────────────
@@ -528,6 +644,8 @@ const PRESETS = {
     dw:    63.2,    // DB §5.1
     z_taper_bot: 27.2,  // taper start at −36 mMSL
     z_taper_top: 56.2,  // taper end at −7 mMSL
+    K_lat_ov: 4.911,    // Frank's PY curves (GN/m)
+    K_rot_ov: 1837.1,   // Frank's PY curves (GN·m/rad)
   },
   updated: {
     label: 'Updated (DB Tables 12-1, 12-2, 12-3)',
@@ -557,6 +675,8 @@ const PRESETS = {
     dw:    63.2,
     z_taper_bot: 27.2,
     z_taper_top: 56.2,
+    K_lat_ov: 17.610,   // Frank's PY curves (GN/m)
+    K_rot_ov: 9825.5,   // Frank's PY curves (GN·m/rad)
   },
   scour: null,      // built below from 'updated' (top 4 m removed, L_emb -4)
 };
@@ -583,6 +703,8 @@ PRESETS.scour = (() => {
     dw:      u.dw + 4,                    // 63.2 → 67.2 (deeper local mudline)
     z_taper_bot: u.z_taper_bot + 4,       // taper shifts up in mudline coords
     z_taper_top: u.z_taper_top + 4,
+    K_lat_ov: u.K_lat_ov,   // reuse updated until Frank provides scour case
+    K_rot_ov: u.K_rot_ov,
   };
 })();
 
@@ -653,6 +775,8 @@ function loadPreset(name) {
   document.getElementById('dw').value         = p.dw;
   document.getElementById('z_taper_bot').value = p.z_taper_bot;
   document.getElementById('z_taper_top').value = p.z_taper_top;
+  document.getElementById('K_lat_ov').value = p.K_lat_ov || 0;
+  document.getElementById('K_rot_ov').value = p.K_rot_ov || 0;
   // visual cue
   document.querySelectorAll('.preset-row button').forEach(b => b.classList.remove('preset-active'));
   const idx = ({initial:0, updated:1, scour:2})[name];
@@ -901,13 +1025,23 @@ function nfaSolve(opts) {
   }
   const meq = Mrna + m_int;                          // RNA at tip with ψ=1
 
+  // Rotary inertia contribution — adds to effective modal mass
+  // When tower top tilts, RNA resists rotation: ΔM = I × (θ_tip/δ_tip)²
+  const theta_ratio = theta[N-1] / delta_tip;         // normalized tip slope (1/m)
+  const I_fa = (opts.I_fa || 0) * 1e3;               // tm² → kg·m²
+  const I_ss = (opts.I_ss || 0) * 1e3;
+  const meq_fa = meq + I_fa * theta_ratio * theta_ratio;
+  const meq_ss = meq + I_ss * theta_ratio * theta_ratio;
+
   // Combined stiffness in series with PISA mudline springs
   const keq = 1 / (1/k_str + 1/K_lat + (L*L)/K_rot);
-  const f1  = (1/(2*Math.PI)) * Math.sqrt(keq / meq);
+  const f1    = (1/(2*Math.PI)) * Math.sqrt(keq / meq);
+  const f1_fa = (1/(2*Math.PI)) * Math.sqrt(keq / meq_fa);
+  const f1_ss = (1/(2*Math.PI)) * Math.sqrt(keq / meq_ss);
 
   // Forcing frequencies / margins / verdict
-  const f1P = rpm_max / 60;
-  const f3P = Nb * rpm_min / 60;
+  const f1P = rpm_max / 60;          // 1P at rated speed → upper 1P limit (worst case for margin above 1P)
+  const f3P = Nb * rpm_min / 60;    // 3P at cut-in speed → lower 3P limit (worst case for margin below 3P)
   const fp  = 1 / Tp;
   const margin1P = (f1 - f1P) / f1P;
   const margin3P = (f3P - f1) / f3P;
@@ -917,7 +1051,7 @@ function nfaSolve(opts) {
 
   const m_dist = pileSteelMass + towerSteelMass + addedMass + mgMass;
   return {
-    f1, f1P, f3P, fp, meq, m_dist, k_str, keq, margin1P, margin3P, verdict,
+    f1, f1_fa, f1_ss, f1P, f3P, fp, meq, m_dist, k_str, keq, margin1P, margin3P, verdict,
     L, Lt,
     pileSteelMass, towerSteelMass, addedMass, mgMass,
   };
@@ -952,6 +1086,21 @@ function compute() {
     return;
   }
 
+  // Foundation stiffness — use PY override if provided, else PISA
+  const K_lat_ov = v('K_lat_ov') * 1e9;
+  const K_rot_ov = v('K_rot_ov') * 1e9;
+  const useOv = K_lat_ov > 0 && K_rot_ov > 0;
+  const K_lat_f = useOv ? K_lat_ov : p.K_lat;
+  const K_rot_f = useOv ? K_rot_ov : p.K_rot;
+  const src = document.getElementById('stiff_source');
+  if (useOv) {
+    src.textContent = '✓ Using Frank\'s PY curves';
+    src.style.color = 'var(--pass)';
+  } else {
+    src.textContent = '— Using PISA model (no override set)';
+    src.style.color = 'var(--muted)';
+  }
+
   // PISA card
   document.getElementById('r_klat').textContent  = (p.K_lat/1e9).toFixed(2) + ' GN/m';
   document.getElementById('r_klat_sub').textContent = p.K_lat.toExponential(3) + ' N/m';
@@ -983,10 +1132,11 @@ function compute() {
     towerRows: readTower(),
     E_st: v('E_st'), rho_st: v('rho_st'),
     Mrna: v('Mrna'),
+    I_fa: v('I_fa'), I_ss: v('I_ss'),
     dw: dw_msl, dw_msl,
     rho_w: v('rho_w'), rho_mg: v('rho_mg'),
     tmg: v('tmg'), tmg_deep: v('tmg_deep'),
-    K_lat: p.K_lat, K_rot: p.K_rot,
+    K_lat: K_lat_f, K_rot: K_rot_f,
     Nb: v('Nb'), rpm_min: v('rpm_min'), rpm_max: v('rpm_max'),
     Tp: v('Tp'),
     m1P: v('m1P')/100, m3P: v('m3P')/100,
@@ -1035,6 +1185,20 @@ function compute() {
   // Result cards - primary
   document.getElementById('r_f1').textContent  = n.f1.toFixed(3) + ' Hz';
   document.getElementById('r_f1_sub').textContent = `period ${(1/n.f1).toFixed(2)} s`;
+
+  // Fore-aft and side-to-side with rotary inertia
+  document.getElementById('r_f1_fa').textContent = n.f1_fa.toFixed(3) + ' Hz';
+  document.getElementById('r_f1_fa_sub').textContent = `Δ = ${((n.f1-n.f1_fa)/n.f1*100).toFixed(1)}% below no-inertia f₁`;
+  document.getElementById('r_f1_ss').textContent = n.f1_ss.toFixed(3) + ' Hz';
+  document.getElementById('r_f1_ss_sub').textContent = `Δ = ${((n.f1-n.f1_ss)/n.f1*100).toFixed(1)}% below no-inertia f₁`;
+
+  // ±5% DNV §3.6.2.5 band
+  const f_lo5 = n.f1_fa * 0.95, f_hi5 = n.f1_fa * 1.05;
+  // DNV §3.6.2.2: fR/f0,n ≤ 0.95 → f_lo5 ≥ f1P/0.95; and f_hi5/f3P ≤ 0.95 → f_hi5 ≤ f3P×0.95
+  const band_ok = f_lo5 >= n.f1P / 0.95 && f_hi5 <= n.f3P * 0.95;
+  const bandEl = document.getElementById('r_f1_band');
+  bandEl.textContent = `${f_lo5.toFixed(3)} – ${f_hi5.toFixed(3)} Hz`;
+  bandEl.className = 'value ' + (band_ok ? 'pass' : 'warn');
   document.getElementById('r_1P').textContent = n.f1P.toFixed(3) + ' Hz';
   document.getElementById('r_3P').textContent = n.f3P.toFixed(3) + ' Hz';
   document.getElementById('r_meq').textContent = (n.meq/1000).toFixed(0) + ' t';
@@ -1068,9 +1232,33 @@ function compute() {
       ? '<br><span style="font-weight:400; font-size:12.5px;">• ' + extraNotes.join('<br>• ') + '</span>'
       : '');
 
+  // Modal solver — f₂, f₃ and mode shapes
+  try {
+    const modal = modalSolve({ ...nfaIn, dw_msl });
+    document.getElementById('r_f2').textContent = modal.f2.toFixed(3) + ' Hz';
+    document.getElementById('r_f2_sub').textContent = `period ${(1/modal.f2).toFixed(3)} s`;
+    document.getElementById('r_f3').textContent = modal.f3.toFixed(3) + ' Hz';
+    document.getElementById('r_f3_sub').textContent = `period ${(1/modal.f3).toFixed(3)} s`;
+    // DNV §3.6.2.3: highest computed mode must be ≥ 1.2 × 3P
+    const req3623 = n.f3P * 1.2;
+    const pass3623 = modal.f2 >= req3623;
+    const el3623 = document.getElementById('r_dnv3623');
+    el3623.textContent = `f₂ = ${modal.f2.toFixed(3)} Hz  ${pass3623 ? '≥' : '<'}  ${req3623.toFixed(3)} Hz`;
+    el3623.className = 'value ' + (pass3623 ? 'pass' : 'fail');
+    drawModeShapes(modal);
+  } catch(e) {
+    document.getElementById('r_f2').textContent = 'error';
+    document.getElementById('r_f3').textContent = 'error';
+    console.error('modal:', e);
+  }
+
+  // Comparison chart + JONSWAP spectrum
+  computeComparison();
+  drawJONSWAP(n.f1, n.f1P, n.f3P);
+
   // Diagram
   drawBands({
-    f1: n.f1, f1_lo, f1_hi, f1P: n.f1P, f3P: n.f3P,
+    f1: n.f1, f1_fa: n.f1_fa, f1_ss: n.f1_ss, f1_lo, f1_hi, f1P: n.f1P, f3P: n.f3P,
     fp: n.fp, fp_band_lo, fp_band_hi, fs_VIV,
     rpm_min: nfaIn.rpm_min, rpm_max: nfaIn.rpm_max, Nb: nfaIn.Nb,
   });
@@ -1079,11 +1267,35 @@ function compute() {
 // ───────────────────────────────────────────────────────────────────────
 // SVG band diagram
 // ───────────────────────────────────────────────────────────────────────
+// Shared legend renderer — draws a compact row of colour swatches + labels
+// items: [{color, label, dash?, rect?}]
+// Returns SVG string. Items auto-wrapped across rows if they exceed maxW.
+function svgLegend(items, x0, y0, maxW) {
+  const swW = 18, swH = 3, gap = 8, itemPad = 16, fontSize = 9.5;
+  let out = '', cx = x0, cy = y0;
+  items.forEach(item => {
+    // Estimate label width (rough: 6px per char)
+    const estW = swW + gap + item.label.length * 5.8 + itemPad;
+    if (cx + estW > x0 + maxW + 4) { cx = x0; cy += 18; }  // wrap to next row
+    if (item.rect) {
+      const fo = item.fillOpacity != null ? ` fill-opacity="${item.fillOpacity}"` : '';
+      out += `<rect x="${cx}" y="${cy-7}" width="${swW}" height="10" fill="${item.color}"${fo} `
+           + `stroke="${item.border||item.color}" stroke-width="0.8"/>`;
+    } else {
+      const dash = item.dash ? ` stroke-dasharray="${item.dash}"` : '';
+      out += `<line x1="${cx}" y1="${cy-2}" x2="${cx+swW}" y2="${cy-2}" stroke="${item.color}" stroke-width="2.5"${dash}/>`;
+    }
+    out += `<text x="${cx+swW+gap}" y="${cy+2}" fill="#666" font-size="${fontSize}">${item.label}</text>`;
+    cx += estW;
+  });
+  return out;
+}
+
 function drawBands(d) {
   const svg = document.getElementById('freq-svg');
-  const W = 800, H = 130;
+  const W = 800, H = 200;
   const xmin = 0, xmax = 0.6;       // Hz
-  const padL = 50, padR = 20, padT = 18, padB = 30;
+  const padL = 50, padR = 20, padT = 18, padB = 55;
   const x = f => padL + (f - xmin) / (xmax - xmin) * (W - padL - padR);
 
   let out = '';
@@ -1140,7 +1352,7 @@ function drawBands(d) {
     out += `<text x="${x(d.fs_VIV)+3}" y="${H-padB-4}" fill="#2dd4bf" font-size="10">VIV ${d.fs_VIV.toFixed(3)} Hz</text>`;
   }
 
-  // f1 envelope (low → high) as a thick blue bar with markers at the ends
+  // f1 envelope (SWL range) as a thick bar
   if (d.f1_lo && d.f1_hi && d.f1_hi > d.f1_lo) {
     out += `<line x1="${x(d.f1_lo)}" y1="${padT+10}" x2="${x(d.f1_hi)}" y2="${padT+10}" `
          + `stroke="#4ea1ff" stroke-width="3"/>`;
@@ -1148,13 +1360,687 @@ function drawBands(d) {
     out += `<line x1="${x(d.f1_hi)}" y1="${padT+5}" x2="${x(d.f1_hi)}" y2="${padT+15}" stroke="#4ea1ff" stroke-width="2"/>`;
   }
 
-  // f1 (baseline SWL) - main marker, full height
-  out += `<line x1="${x(d.f1)}" y1="${padT-2}" x2="${x(d.f1)}" y2="${H-padB+2}" `
+  // ±5% DNV §3.6.2.5 uncertainty band — full height, centred on f₁ fore-aft
+  if (d.f1_fa) {
+    const f5lo = d.f1_fa * 0.95, f5hi = d.f1_fa * 1.05;
+    out += `<rect x="${x(f5lo)}" y="${padT}" width="${x(f5hi)-x(f5lo)}" height="${H-padB-padT}" `
+         + `fill="rgba(78,161,255,0.08)" stroke="#4ea1ff" stroke-width="1" stroke-dasharray="2,2"/>`;
+  }
+
+  // f₁ side-to-side — full height dashed purple, label at bottom
+  if (d.f1_ss) {
+    out += `<line x1="${x(d.f1_ss)}" y1="${padT}" x2="${x(d.f1_ss)}" y2="${H-padB}" `
+         + `stroke="#a78bfa" stroke-width="2" stroke-dasharray="5,3"/>`;
+    out += `<text x="${x(d.f1_ss)+4}" y="${H-padB-5}" fill="#a78bfa" font-size="10" text-anchor="start" font-weight="600">`
+         + `f₁ S-S ${d.f1_ss.toFixed(3)} Hz</text>`;
+  }
+
+  // f₁ fore-aft — full height solid blue, label at top
+  const f1_fa = d.f1_fa || d.f1;
+  out += `<line x1="${x(f1_fa)}" y1="${padT}" x2="${x(f1_fa)}" y2="${H-padB}" `
        + `stroke="#4ea1ff" stroke-width="2.5"/>`;
-  out += `<text x="${x(d.f1)}" y="${padT-4}" fill="#4ea1ff" font-size="11" text-anchor="middle" font-weight="600">`
-       + `f₁ = ${d.f1.toFixed(3)} Hz</text>`;
+  out += `<text x="${x(f1_fa)}" y="${padT - 4}" fill="#4ea1ff" font-size="11" text-anchor="middle" font-weight="600">`
+       + `f₁ F-A = ${f1_fa.toFixed(3)} Hz</text>`;
+
+  // Embedded legend
+  const legItems = [
+    {color:'#f25c5c', label:'1P (rotor)'},
+    {color:'#f5a623', label:'3P (blade-passing)'},
+    {color:'#4ea1ff', label:'f₁ fore-aft (Ixx)'},
+    {color:'#a78bfa', label:'f₁ side-to-side (Iyy)', dash:'5,3'},
+    {color:'#4ea1ff', fillOpacity:0.20, border:'#4ea1ff', label:'±5% DNV §3.6.2.5', rect:true},
+    {color:'#888888', fillOpacity:0.25, border:'#888888', label:'Wave fₚ band', rect:true},
+    {color:'#2dd4bf', label:'VIV fₛ'},
+  ];
+  out += svgLegend(legItems, padL, H - 10, W - padL - padR);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
+  svg.innerHTML = out;
+  _svgCache['freq-svg'] = { out, W, H };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// LU FACTORIZATION — pre-factor K once, then cheap back-solves per iteration
+// ───────────────────────────────────────────────────────────────────────
+function luDecomp(A) {
+  const n = A.length;
+  const a = A.map(r => r.slice());
+  const piv = Array.from({length: n}, (_, i) => i);
+  for (let k = 0; k < n; k++) {
+    let p = k;
+    for (let i = k+1; i < n; i++)
+      if (Math.abs(a[i][k]) > Math.abs(a[p][k])) p = i;
+    if (p !== k) { [a[k], a[p]] = [a[p], a[k]]; [piv[k], piv[p]] = [piv[p], piv[k]]; }
+    if (Math.abs(a[k][k]) < 1e-30) continue;
+    for (let i = k+1; i < n; i++) {
+      a[i][k] /= a[k][k];
+      for (let j = k+1; j < n; j++) a[i][j] -= a[i][k] * a[k][j];
+    }
+  }
+  return { a, piv };
+}
+
+function luSolve(lu, b) {
+  const { a, piv } = lu;
+  const n = b.length;
+  const x = piv.map(i => b[i]);
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < i; j++) x[i] -= a[i][j] * x[j];
+  for (let i = n-1; i >= 0; i--) {
+    for (let j = i+1; j < n; j++) x[i] -= a[i][j] * x[j];
+    x[i] /= a[i][i];
+  }
+  return x;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// MODAL SOLVER — inverse iteration with M-orthogonal deflation, modes 1–3
+// ───────────────────────────────────────────────────────────────────────
+function modalSolve(opts) {
+  const { Ls, Da, ta, D_pile_bot, z_taper_bot, z_taper_top, towerRows,
+          E_st, rho_st, Mrna, dw, dw_msl, rho_w, rho_mg, tmg, tmg_deep,
+          K_lat, K_rot } = opts;
+
+  const Lt   = towerRows[towerRows.length-1].z - towerRows[0].z;
+  const L    = Ls + Lt;
+  const N    = 61;
+  const dz   = L / (N - 1);
+  const ndof = 2 * N;
+  const z_mg_split = dw_msl - 40;
+  const tt   = Math.max(z_taper_top, z_taper_bot);
+
+  function pileOD(zi) {
+    if (zi <= z_taper_bot) return D_pile_bot;
+    if (zi >= tt) return Da;
+    return D_pile_bot + (zi - z_taper_bot) / (tt - z_taper_bot) * (Da - D_pile_bot);
+  }
+
+  const EIn = [], mlin = [], zn = [];
+  for (let i = 0; i < N; i++) {
+    const zi = i * dz;
+    zn.push(zi);
+    let D, t;
+    if (zi <= Ls) {
+      D = pileOD(zi); t = ta;
+    } else {
+      const zL = zi - Ls + towerRows[0].z;
+      let s = towerRows.length - 2;
+      for (let k = 0; k < towerRows.length - 1; k++)
+        if (zL >= towerRows[k].z && zL <= towerRows[k+1].z) { s = k; break; }
+      const p1 = towerRows[s], p2 = towerRows[s+1];
+      const fr = (p2.z > p1.z) ? Math.max(0, Math.min(1, (zL-p1.z)/(p2.z-p1.z))) : 0;
+      D = p1.OD + fr*(p2.OD - p1.OD);
+      t = p1.wall + fr*(p2.wall - p1.wall);
+    }
+    EIn.push(E_st * (Math.PI/64) * (Math.pow(D,4) - Math.pow(D-2*t,4)));
+    const mst = rho_st * (Math.PI/4) * (D*D - (D-2*t)*(D-2*t));
+    let madd = 0;
+    if (zi < dw) {
+      const tmi = zi >= z_mg_split ? tmg : tmg_deep;
+      const Ds  = D + 2*tmi;
+      madd = rho_w*(Math.PI/4)*Ds*Ds + rho_mg*(Math.PI/4)*(Ds*Ds - D*D);
+    }
+    mlin.push(mst + madd);
+  }
+
+  const K = Array.from({length: ndof}, () => new Array(ndof).fill(0));
+  const M = Array.from({length: ndof}, () => new Array(ndof).fill(0));
+
+  for (let e = 0; e < N-1; e++) {
+    const EIe = 0.5*(EIn[e]+EIn[e+1]);
+    const me  = 0.5*(mlin[e]+mlin[e+1]);
+    const Le  = dz, c = EIe/(Le*Le*Le), mc = me*Le/420, L2 = Le*Le;
+    const ke  = [[ 12*c,  6*Le*c, -12*c,  6*Le*c],
+                  [ 6*Le*c, 4*L2*c,-6*Le*c, 2*L2*c],
+                  [-12*c, -6*Le*c,  12*c, -6*Le*c],
+                  [ 6*Le*c, 2*L2*c,-6*Le*c, 4*L2*c]];
+    const mce = [[156*mc,  22*Le*mc,  54*mc, -13*Le*mc],
+                  [ 22*Le*mc, 4*L2*mc, 13*Le*mc, -3*L2*mc],
+                  [ 54*mc,  13*Le*mc, 156*mc, -22*Le*mc],
+                  [-13*Le*mc,-3*L2*mc,-22*Le*mc,  4*L2*mc]];
+    const d = [2*e, 2*e+1, 2*e+2, 2*e+3];
+    for (let ii = 0; ii < 4; ii++)
+      for (let jj = 0; jj < 4; jj++) {
+        K[d[ii]][d[jj]] += ke[ii][jj];
+        M[d[ii]][d[jj]] += mce[ii][jj];
+      }
+  }
+  K[0][0] += K_lat;  K[1][1] += K_rot;
+  M[ndof-2][ndof-2] += Mrna;
+
+  const lu = luDecomp(K);
+
+  function mvM(v) {
+    const w = new Array(ndof).fill(0);
+    for (let i = 0; i < ndof; i++)
+      for (let j = 0; j < ndof; j++) w[i] += M[i][j]*v[j];
+    return w;
+  }
+  function mDot(u, v) {
+    const Mv = mvM(v); let s = 0;
+    for (let i = 0; i < ndof; i++) s += u[i]*Mv[i];
+    return s;
+  }
+  function mNorm(v) { const n = Math.sqrt(Math.abs(mDot(v,v))); return v.map(x=>x/n); }
+  function mOrth(v, modes) {
+    let u = v.slice();
+    for (const phi of modes) { const c = mDot(u,phi); u = u.map((x,i)=>x-c*phi[i]); }
+    return u;
+  }
+  function rayleighQ(v) {
+    let num = 0;
+    for (let i = 0; i < ndof; i++) { let Kvi = 0; for (let j = 0; j < ndof; j++) Kvi += K[i][j]*v[j]; num += v[i]*Kvi; }
+    return num / mDot(v,v);
+  }
+
+  const modes = [], freqs = [];
+  for (let m = 0; m < 3; m++) {
+    let v = new Array(ndof).fill(0);
+    for (let i = 0; i < N; i++)
+      v[2*i] = (i+1)/N * Math.cos(m * Math.PI * i / (N-1));
+    v = mOrth(v, modes);
+    v = mNorm(v);
+
+    let omega2 = 0;
+    for (let iter = 0; iter < 250; iter++) {
+      let vn = luSolve(lu, mvM(v));
+      vn = mOrth(vn, modes);
+      vn = mNorm(vn);
+      const o2 = rayleighQ(vn);
+      const converged = iter > 5 && Math.abs(o2-omega2)/Math.max(Math.abs(o2),1) < 1e-8;
+      omega2 = o2; v = vn;
+      if (converged) break;
+    }
+    if (v[ndof-2] < 0) v = v.map(x => -x);
+    modes.push(v.slice());
+    freqs.push(Math.sqrt(Math.abs(omega2)) / (2*Math.PI));
+  }
+
+  const shapes = modes.map(phi => {
+    const u = Array.from({length: N}, (_, i) => phi[2*i]);
+    const mx = Math.max(...u.map(Math.abs));
+    return u.map(x => x/mx);
+  });
+
+  return { f1: freqs[0], f2: freqs[1], f3: freqs[2], shapes, zn, L, dw: dw_msl, Ls };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// MODE SHAPE DIAGRAM
+// ───────────────────────────────────────────────────────────────────────
+function drawModeShapes(res) {
+  const svg = document.getElementById('mode-svg');
+  const W = 800, H = 340;
+  const padL = 55, padR = 20, padT = 28, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const umin = -1.35, umax = 1.35;
+  const px = u => padL + (u - umin) / (umax - umin) * plotW;
+  const py = z => padT + plotH * (1 - z / res.L);
+  const colors = ['#4ea1ff', '#2ecc71', '#f5a623'];
+  const labels = [`f₁ = ${res.f1.toFixed(3)} Hz`, `f₂ = ${res.f2.toFixed(3)} Hz`, `f₃ = ${res.f3.toFixed(3)} Hz`];
+
+  let out = '';
+
+  // Vertical grid lines
+  [-1.0, -0.5, 0, 0.5, 1.0].forEach(u => {
+    out += `<line x1="${px(u)}" y1="${padT}" x2="${px(u)}" y2="${padT+plotH}" stroke="#2a3340" stroke-width="${u===0?1.5:0.5}"/>`;
+  });
+
+  // SWL marker
+  if (res.dw > 0 && res.dw < res.L) {
+    const yw = py(res.dw);
+    out += `<line x1="${padL}" y1="${yw}" x2="${padL+plotW}" y2="${yw}" stroke="#4ea1ff" stroke-width="1" stroke-dasharray="5,3" opacity="0.35"/>`;
+    out += `<text x="${padL+4}" y="${yw-4}" fill="#4ea1ff" font-size="10" opacity="0.55">SWL</text>`;
+  }
+
+  // Mode shape curves
+  res.shapes.forEach((shape, mi) => {
+    let path = '';
+    res.zn.forEach((z, i) => {
+      path += (i===0 ? 'M' : 'L') + ` ${px(shape[i]).toFixed(1)},${py(z).toFixed(1)} `;
+    });
+    out += `<path d="${path}" fill="none" stroke="${colors[mi]}" stroke-width="2.5"/>`;
+    // Label at top of each curve
+    const topU = shape[shape.length-1];
+    const anchor = topU >= 0 ? 'start' : 'end';
+    out += `<text x="${(px(topU) + (topU>=0?7:-7)).toFixed(0)}" y="${(py(res.L)-8).toFixed(0)}" `
+         + `fill="${colors[mi]}" font-size="11" font-weight="600" text-anchor="${anchor}">${labels[mi]}</text>`;
+  });
+
+  // Axes
+  out += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#2a3340"/>`;
+  out += `<line x1="${padL}" y1="${padT+plotH}" x2="${padL+plotW}" y2="${padT+plotH}" stroke="#2a3340"/>`;
+
+  // Y ticks
+  const step = res.L > 150 ? 40 : 20;
+  for (let z = 0; z <= res.L+0.1; z += step) {
+    const yt = py(Math.min(z, res.L));
+    out += `<line x1="${padL-4}" y1="${yt}" x2="${padL}" y2="${yt}" stroke="#2a3340"/>`;
+    out += `<text x="${padL-6}" y="${yt+4}" fill="#8a94a3" font-size="10" text-anchor="end">${Math.round(Math.min(z,res.L))}</text>`;
+  }
+
+  // X ticks
+  [-1.0, -0.5, 0, 0.5, 1.0].forEach(u => {
+    const xt = px(u);
+    out += `<line x1="${xt}" y1="${padT+plotH}" x2="${xt}" y2="${padT+plotH+5}" stroke="#2a3340"/>`;
+    out += `<text x="${xt}" y="${padT+plotH+18}" fill="#8a94a3" font-size="10" text-anchor="middle">${u.toFixed(1)}</text>`;
+  });
+
+  // Axis labels
+  out += `<text x="12" y="${padT+plotH/2}" fill="#8a94a3" font-size="11" text-anchor="middle" transform="rotate(-90,12,${padT+plotH/2})">Height above mudline (m)</text>`;
+  out += `<text x="${padL+plotW/2}" y="${H-22}" fill="#8a94a3" font-size="11" text-anchor="middle">Normalised lateral displacement</text>`;
+
+  // Embedded legend
+  const modeItems = [
+    {color:'#4ea1ff', label:`Mode 1 — f₁ = ${res.f1.toFixed(3)} Hz`},
+    {color:'#2ecc71', label:`Mode 2 — f₂ = ${res.f2.toFixed(3)} Hz`},
+    {color:'#f5a623', label:`Mode 3 — f₃ = ${res.f3.toFixed(3)} Hz`},
+  ];
+  out += svgLegend(modeItems, padL, H - 6, plotW);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+  _svgCache['mode-svg'] = { out, W, H };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// SCENARIO COMPARISON - runs all three presets, draws side-by-side chart
+// ───────────────────────────────────────────────────────────────────────
+function computeComparison() {
+  const towerRows = readTower();
+  const PISA_coeff = {
+    sand: { kp: v('kp_sand'), km: v('km_sand'), kHB: v('kHB_sand'), kMB: v('kMB_sand') },
+    clay: { kp: v('kp_clay'), km: v('km_clay'), kHB: v('kHB_clay'), kMB: v('kMB_clay') },
+  };
+  const shared = {
+    D_emb: v('D_emb'), t_emb: v('t_emb'),
+    n_elem: Math.max(10, Math.round(v('n_elem'))),
+    E_st: v('E_st'), rho_st: v('rho_st'),
+    Da: v('D_above'), ta: v('t_above'), D_pile_bot: v('D_pile_bot'),
+    Mrna: v('Mrna'), I_fa: v('I_fa'), I_ss: v('I_ss'),
+    rho_w: v('rho_w'), rho_mg: v('rho_mg'),
+    Nb: v('Nb'), rpm_min: v('rpm_min'), rpm_max: v('rpm_max'),
+    nu_sand: v('nu_sand'), nu_clay: v('nu_clay'),
+    m1P: v('m1P') / 100, m3P: v('m3P') / 100,
+  };
+
+  const defs = [
+    { label: 'Initial state',       preset: PRESETS.initial, color: '#4ea1ff' },
+    { label: 'Updated state',       preset: PRESETS.updated, color: '#2ecc71' },
+    { label: 'Updated + 4 m scour', preset: PRESETS.scour,   color: '#f5a623' },
+  ];
+
+  const results = defs.map(d => {
+    const p = d.preset;
+    const pisaIn = {
+      D: shared.D_emb, t: shared.t_emb, L_emb: p.L_emb,
+      E_st: shared.E_st, n_elem: shared.n_elem,
+      soil: p.soil, PISA: PISA_coeff,
+      nu_sand: shared.nu_sand, nu_clay: shared.nu_clay,
+    };
+    let pisa;
+    try { pisa = pisaSolve(pisaIn); } catch(e) { return null; }
+
+    const dw_msl = p.dw;
+    const nfaIn = {
+      Ls: p.Ls, Da: shared.Da, ta: shared.ta,
+      D_pile_bot: shared.D_pile_bot,
+      z_taper_bot: p.z_taper_bot, z_taper_top: p.z_taper_top,
+      towerRows,
+      E_st: shared.E_st, rho_st: shared.rho_st,
+      Mrna: shared.Mrna, I_fa: shared.I_fa, I_ss: shared.I_ss,
+      dw: dw_msl, dw_msl,
+      rho_w: shared.rho_w, rho_mg: shared.rho_mg,
+      tmg: p.tmg, tmg_deep: p.tmg_deep,
+      K_lat: (p.K_lat_ov > 0 && p.K_rot_ov > 0) ? p.K_lat_ov*1e9 : pisa.K_lat,
+      K_rot: (p.K_lat_ov > 0 && p.K_rot_ov > 0) ? p.K_rot_ov*1e9 : pisa.K_rot,
+      Nb: shared.Nb, rpm_min: shared.rpm_min, rpm_max: shared.rpm_max,
+      Tp: p.Tp, m1P: shared.m1P, m3P: shared.m3P,
+    };
+    const nfa = nfaSolve(nfaIn);
+    return { label: d.label, color: d.color, f1: nfa.f1, f1P: nfa.f1P, f3P: nfa.f3P };
+  }).filter(Boolean);
+
+  if (results.length) drawComparisonChart(results);
+}
+
+function drawComparisonChart(scenarios) {
+  const svg   = document.getElementById('comp-svg');
+  const W     = 800;
+  const rowH  = 52;
+  const padL  = 148, padR = 22, padT = 42, padB = 34;
+  const H     = padT + scenarios.length * rowH + padB;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
+
+  const xmin = 0, xmax = 0.6;
+  const px  = f  => padL + (f - xmin) / (xmax - xmin) * (W - padL - padR);
+  const rowY = i => padT + i * rowH + rowH / 2;
+  const chartH = scenarios.length * rowH;
+
+  // 1P and 3P from first scenario (rotor-only, same for all)
+  const f1P = scenarios[0].f1P;
+  const f3P = scenarios[0].f3P;
+
+  let out = '';
+
+  // Zone fills
+  out += `<rect x="${padL}" y="${padT}" width="${px(f1P)-padL}" height="${chartH}" fill="rgba(242,92,92,0.07)"/>`;
+  out += `<rect x="${px(f1P)}" y="${padT}" width="${px(f3P)-px(f1P)}" height="${chartH}" fill="rgba(46,204,113,0.08)"/>`;
+  out += `<rect x="${px(f3P)}" y="${padT}" width="${W-padR-px(f3P)}" height="${chartH}" fill="rgba(245,166,35,0.06)"/>`;
+
+  // Zone labels (above chart)
+  const zones = [
+    { label: 'Soft-soft',    x: (padL + px(f1P)) / 2,        col: 'rgba(242,92,92,0.75)' },
+    { label: 'Soft-stiff ✓', x: (px(f1P) + px(f3P)) / 2,    col: 'rgba(46,204,113,0.9)' },
+    { label: 'Stiff-stiff',  x: (px(f3P) + W - padR) / 2,   col: 'rgba(245,166,35,0.75)' },
+  ];
+  zones.forEach(z => {
+    out += `<text x="${z.x}" y="${padT-8}" fill="${z.col}" font-size="11" text-anchor="middle" font-weight="600">${z.label}</text>`;
+  });
+
+  // Row dividers
+  for (let i = 0; i <= scenarios.length; i++) {
+    const gy = padT + i * rowH;
+    out += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#2a3340" stroke-width="0.6"/>`;
+  }
+
+  // 1P line + label
+  out += `<line x1="${px(f1P)}" y1="${padT}" x2="${px(f1P)}" y2="${padT+chartH}" stroke="#f25c5c" stroke-width="2"/>`;
+  out += `<text x="${px(f1P)}" y="${padT-22}" fill="#f25c5c" font-size="10" text-anchor="middle" font-weight="600">1P</text>`;
+  out += `<text x="${px(f1P)}" y="${padT-12}" fill="#f25c5c" font-size="10" text-anchor="middle">${f1P.toFixed(3)} Hz</text>`;
+
+  // 3P line + label
+  out += `<line x1="${px(f3P)}" y1="${padT}" x2="${px(f3P)}" y2="${padT+chartH}" stroke="#f5a623" stroke-width="2"/>`;
+  out += `<text x="${px(f3P)}" y="${padT-22}" fill="#f5a623" font-size="10" text-anchor="middle" font-weight="600">3P</text>`;
+  out += `<text x="${px(f3P)}" y="${padT-12}" fill="#f5a623" font-size="10" text-anchor="middle">${f3P.toFixed(3)} Hz</text>`;
+
+  // Axis
+  out += `<line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#2a3340"/>`;
+  for (let f = 0; f <= 0.6; f += 0.05) {
+    const xt = px(f);
+    const major = Math.abs(f % 0.1) < 0.001;
+    out += `<line x1="${xt}" y1="${padT+chartH}" x2="${xt}" y2="${padT+chartH+(major?6:3)}" stroke="#2a3340"/>`;
+    if (major) {
+      out += `<text x="${xt}" y="${padT+chartH+18}" fill="#8a94a3" font-size="11" text-anchor="middle">${f.toFixed(1)}</text>`;
+    }
+  }
+  out += `<text x="${W-padR}" y="${padT+chartH-5}" fill="#8a94a3" font-size="11" text-anchor="end">Hz</text>`;
+
+  // Per-scenario rows
+  scenarios.forEach((s, i) => {
+    const cy = rowY(i);
+
+    // Row label
+    out += `<text x="${padL-8}" y="${cy+4}" fill="${s.color}" font-size="12.5" text-anchor="end" font-weight="600">${s.label}</text>`;
+
+    // f₁ diamond marker
+    const fx = px(s.f1), r = 8;
+    out += `<polygon points="${fx},${cy-r} ${fx+r},${cy} ${fx},${cy+r} ${fx-r},${cy}" fill="${s.color}" opacity="0.95"/>`;
+
+    // f₁ value label
+    out += `<text x="${fx}" y="${cy-r-4}" fill="${s.color}" font-size="10.5" text-anchor="middle" font-weight="600">${s.f1.toFixed(3)} Hz</text>`;
+  });
+
+  // Embedded legend
+  const legItems = scenarios.map(s => ({color: s.color, label: s.label}));
+  legItems.push({color:'#f25c5c', label:`1P = ${scenarios[0].f1P.toFixed(3)} Hz`});
+  legItems.push({color:'#f5a623', label:`3P = ${scenarios[0].f3P.toFixed(3)} Hz`});
+  const H_leg = H + 28;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H_leg}`);
+  svg.style.height = H_leg + 'px';
+  out += svgLegend(legItems, padL, H_leg - 10, W - padL - padR);
 
   svg.innerHTML = out;
+  _svgCache['comp-svg'] = { out, W, H: H_leg };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// JONSWAP WAVE SPECTRUM
+// ───────────────────────────────────────────────────────────────────────
+function jonswapS(f, fp, gamma) {
+  if (f <= 0) return 0;
+  const sigma = (f <= fp) ? 0.07 : 0.09;
+  const r = Math.exp(-Math.pow(f - fp, 2) / (2 * sigma * sigma * fp * fp));
+  return Math.pow(f, -5) * Math.exp(-1.25 * Math.pow(fp / f, 4)) * Math.pow(gamma, r);
+}
+
+function drawJONSWAP(f1, f1P, f3P) {
+  const svg = document.getElementById('jonswap-svg');
+  const W = 800, H = 234;
+  const padL = 52, padR = 22, padT = 28, padB = 50;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const fmin = 0.01, fmax = 0.50;
+  const px = f => padL + (f - fmin) / (fmax - fmin) * plotW;
+  const py = s => padT + plotH - Math.min(s, 1.0) * plotH;
+
+  const gamma = 3.3;
+  const NF = 600;
+  const curves = [
+    { label: 'Initial',  fp: 1 / PRESETS.initial.Tp, color: '#4ea1ff', dash: ''    },
+    { label: 'Updated',  fp: 1 / PRESETS.updated.Tp,  color: '#2ecc71', dash: '6,3' },
+  ];
+
+  // Normalise both curves to the same global max so they're comparable
+  let gMax = 0;
+  curves.forEach(c => {
+    for (let i = 0; i < NF; i++) {
+      const f = fmin + (fmax - fmin) * i / (NF - 1);
+      gMax = Math.max(gMax, jonswapS(f, c.fp, gamma));
+    }
+  });
+
+  let out = '';
+
+  // Soft-stiff zone background
+  const xSS1 = px(Math.max(f1P, fmin));
+  const xSS2 = px(Math.min(f3P, fmax));
+  if (xSS2 > xSS1) {
+    out += `<rect x="${xSS1}" y="${padT}" width="${xSS2-xSS1}" height="${plotH}" fill="rgba(46,204,113,0.05)"/>`;
+  }
+
+  // Horizontal grid lines
+  [0.25, 0.50, 0.75, 1.00].forEach(s => {
+    const yg = py(s);
+    out += `<line x1="${padL}" y1="${yg}" x2="${W-padR}" y2="${yg}" stroke="#2a3340" stroke-width="0.6"/>`;
+    out += `<text x="${padL-5}" y="${yg+4}" fill="#8a94a3" font-size="10" text-anchor="end">${s.toFixed(2)}</text>`;
+  });
+
+  // Spectrum curves + fₚ markers (stagger labels vertically to avoid overlap)
+  curves.forEach((c, ci) => {
+    // Filled area under curve
+    let area = `M ${px(fmin)},${py(0)}`;
+    for (let i = 0; i < NF; i++) {
+      const f = fmin + (fmax - fmin) * i / (NF - 1);
+      area += ` L ${px(f)},${py(jonswapS(f, c.fp, gamma) / gMax)}`;
+    }
+    area += ` L ${px(fmax)},${py(0)} Z`;
+    out += `<path d="${area}" fill="${c.color}" opacity="0.07"/>`;
+
+    // Curve line
+    let path = '';
+    for (let i = 0; i < NF; i++) {
+      const f = fmin + (fmax - fmin) * i / (NF - 1);
+      const s = jonswapS(f, c.fp, gamma) / gMax;
+      path += (i === 0 ? `M` : `L`) + ` ${px(f).toFixed(1)},${py(s).toFixed(1)} `;
+    }
+    out += `<path d="${path}" fill="none" stroke="${c.color}" stroke-width="2"${c.dash ? ` stroke-dasharray="${c.dash}"` : ''}/>`;
+
+    // fₚ tick on x-axis — alternate row to avoid overlap
+    const fpLabelY = padT + plotH + 16 + ci * 14;
+    out += `<line x1="${px(c.fp)}" y1="${padT}" x2="${px(c.fp)}" y2="${padT+plotH}" `
+         + `stroke="${c.color}" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>`;
+    out += `<text x="${px(c.fp)}" y="${fpLabelY}" fill="${c.color}" font-size="10" text-anchor="middle">`
+         + `fₚ=${c.fp.toFixed(3)} Hz</text>`;
+  });
+
+  // 1P line
+  if (f1P >= fmin && f1P <= fmax) {
+    out += `<line x1="${px(f1P)}" y1="${padT}" x2="${px(f1P)}" y2="${padT+plotH}" stroke="#f25c5c" stroke-width="1.5" stroke-dasharray="4,2"/>`;
+    out += `<text x="${px(f1P)+3}" y="${padT+14}" fill="#f25c5c" font-size="10">1P</text>`;
+  }
+
+  // 3P line
+  if (f3P >= fmin && f3P <= fmax) {
+    out += `<line x1="${px(f3P)}" y1="${padT}" x2="${px(f3P)}" y2="${padT+plotH}" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4,2"/>`;
+    out += `<text x="${px(f3P)+3}" y="${padT+14}" fill="#f5a623" font-size="10">3P</text>`;
+  }
+
+  // f₁ line (solid white — the key comparison)
+  if (f1 >= fmin && f1 <= fmax) {
+    out += `<line x1="${px(f1)}" y1="${padT}" x2="${px(f1)}" y2="${padT+plotH}" stroke="#e6ecf2" stroke-width="2.5"/>`;
+    out += `<text x="${px(f1)}" y="${padT-7}" fill="#e6ecf2" font-size="10.5" text-anchor="middle" font-weight="600">f₁ = ${f1.toFixed(3)} Hz</text>`;
+  }
+
+  // Axes
+  out += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#2a3340"/>`;
+  out += `<line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="#2a3340"/>`;
+  for (let f = 0.05; f <= fmax; f += 0.05) {
+    const xt = px(f);
+    const major = Math.round(f * 100) % 10 === 0;
+    out += `<line x1="${xt}" y1="${padT+plotH}" x2="${xt}" y2="${padT+plotH+(major?6:3)}" stroke="#2a3340"/>`;
+    if (major) out += `<text x="${xt}" y="${padT+plotH+16}" fill="#8a94a3" font-size="11" text-anchor="middle">${f.toFixed(1)}</text>`;
+  }
+
+  // Axis labels
+  out += `<text x="${padL + plotW/2}" y="${H-22}" fill="#8a94a3" font-size="11" text-anchor="middle">Frequency (Hz)</text>`;
+  out += `<text x="11" y="${padT + plotH/2}" fill="#8a94a3" font-size="11" text-anchor="middle" `
+       + `transform="rotate(-90,11,${padT + plotH/2})">S(f)  normalised</text>`;
+
+  // Embedded legend
+  const legItems = [
+    {color:'#4ea1ff', label:`Initial sea state  Tₚ = ${PRESETS.initial.Tp} s`},
+    {color:'#2ecc71', label:`Updated sea state  Tₚ = ${PRESETS.updated.Tp} s`, dash:'6,3'},
+    {color:'#e6ecf2', label:`f₁ = ${f1.toFixed(3)} Hz`},
+    {color:'#f25c5c', label:`1P = ${f1P.toFixed(3)} Hz`, dash:'4,2'},
+    {color:'#f5a623', label:`3P = ${f3P.toFixed(3)} Hz`, dash:'4,2'},
+  ];
+  out += svgLegend(legItems, padL, H - 6, plotW);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.style.height = H + 'px';
+  svg.innerHTML = out;
+  _svgCache['jonswap-svg'] = { out, W, H };
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// PNG EXPORT — full light-theme retheme, 2× scale, report quality
+// ───────────────────────────────────────────────────────────────────────
+function exportChart(svgId, filename) {
+  const cached = _svgCache[svgId];
+  if (!cached) { alert('Chart not yet rendered — interact with the tool first.'); return; }
+  const { W, H } = cached;
+
+  // Build SVG from the cached inner content string — never touches the DOM serialiser
+  let inner = cached.out;
+
+  // ── Comprehensive light-theme colour remapping ──────────────────────
+  // The SVGs are authored for a dark UI; every dark colour must be mapped
+  // to a readable light-theme equivalent before rendering on white.
+  const swap = [
+    // Structural lines: axes, ticks, row dividers (dark border → readable gray)
+    [/#2a3340/g,                         '#999999'],
+    // Muted text (axis labels, Hz, units)
+    [/fill="#8a94a3"/g,                  'fill="#444444"'],
+    // White / near-white text AND strokes (f₁ label, f₁ line in JONSWAP)
+    [/fill="#e6ecf2"/g,                  'fill="#111111"'],
+    [/stroke="#e6ecf2"/g,                'stroke="#111111"'],
+    // Muted fills used on wave band label and VIV label
+    [/fill="#aaa"/g,                     'fill="#666666"'],
+    [/fill="#555"/g,                     'fill="#333333"'],
+    // Wave band border and fill
+    [/stroke="#888"/g,                   'stroke="#999999"'],
+    [/rgba\(136,136,136,0\.18\)/g,       'rgba(100,100,100,0.12)'],
+    [/rgba\(136,136,136,0\.4\)/g,        'rgba(100,100,100,0.30)'],
+    // Increase zone fill opacity so they read on white (were tuned for dark)
+    [/rgba\(242,92,92,0\.07\)/g,         'rgba(220,60,60,0.08)'],
+    [/rgba\(46,204,113,0\.08\)/g,        'rgba(30,160,80,0.09)'],
+    [/rgba\(245,166,35,0\.06\)/g,        'rgba(200,130,20,0.08)'],
+    [/rgba\(46,204,113,0\.05\)/g,        'rgba(30,160,80,0.07)'],
+    [/rgba\(78,161,255,0\.08\)/g,        'rgba(50,130,230,0.10)'],
+    [/rgba\(78,161,255,0\.18\)/g,        'rgba(50,130,230,0.14)'],
+    [/rgba\(78,161,255,0\.10\)/g,        'rgba(50,130,230,0.12)'],
+    // JONSWAP spectrum fill (opacity="0.07") — make more visible on white
+    [/opacity="0\.07"/g,                 'opacity="0.15"'],
+    [/opacity="0\.35"/g,                 'opacity="0.25"'],
+    [/opacity="0\.55"/g,                 'opacity="0.45"'],
+    // Row label colours in comparison chart keep their hue but boost for print
+    [/rgba\(242,92,92,0\.75\)/g,         'rgba(200,40,40,0.9)'],
+    [/rgba\(46,204,113,0\.9\)/g,         'rgba(20,140,60,1.0)'],
+    [/rgba\(245,166,35,0\.75\)/g,        'rgba(180,110,10,0.9)'],
+    // SWL dashed line (faint blue on dark) → make visible on white
+    [/rgba\(78,161,255,0\.35\)/g,        'rgba(50,100,200,0.50)'],
+  ];
+  swap.forEach(([re, val]) => { inner = inner.replace(re, val); });
+
+  // Convert fill/stroke="rgba(...)" → fill="#hex" fill-opacity="a" for valid SVG XML
+  const rgbaToHex = (_, r, g, b, a) => {
+    const hex = '#' + [r,g,b].map(v => parseInt(v).toString(16).padStart(2,'0')).join('');
+    return `fill="${hex}" fill-opacity="${parseFloat(a).toFixed(3)}"`;
+  };
+  const rgbaToHexStroke = (_, r, g, b, a) => {
+    const hex = '#' + [r,g,b].map(v => parseInt(v).toString(16).padStart(2,'0')).join('');
+    return `stroke="${hex}" stroke-opacity="${parseFloat(a).toFixed(3)}"`;
+  };
+  inner = inner.replace(/fill="rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)"/g, rgbaToHex);
+  inner = inner.replace(/stroke="rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)"/g, rgbaToHexStroke);
+
+  // ── Wrap in a clean SVG root ─────────────────────────────────────────
+  // Build the SVG from scratch — no DOM serialiser, no namespace pollution
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Arial,Helvetica,sans-serif"><rect width="${W}" height="${H}" fill="white"/>${inner}</svg>`;
+
+  // ── Canvas render at 2× for crisp print output ──────────────────────
+  const scale  = 2;
+  const margin = 14;
+  const canvas = document.createElement('canvas');
+  canvas.width  = Math.ceil((W + 2 * margin) * scale);
+  canvas.height = Math.ceil((H + 2 * margin) * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(scale, scale);
+
+  // Use data URL — blob URLs fail in Safari when drawn to canvas
+  const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+  const img = new Image();
+
+  img.onload = () => {
+    ctx.drawImage(img, margin, margin, W, H);
+    let pngUrl;
+    try {
+      pngUrl = canvas.toDataURL('image/png');
+    } catch(e) {
+      // Canvas tainted (unlikely with data URL) — fall back to SVG download
+      const a = document.createElement('a');
+      a.download = filename + '.svg';
+      a.href = dataUrl;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      return;
+    }
+    const a = document.createElement('a');
+    a.download = filename + '.png';
+    a.href = pngUrl;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  img.onerror = () => {
+    // Parse SVG to find exact XML error
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(s, 'image/svg+xml');
+    const err = doc.querySelector('parsererror');
+    if (err) {
+      console.error('SVG parse error:', err.textContent);
+    }
+    // Fallback: download the SVG directly
+    const a = document.createElement('a');
+    a.download = filename + '.svg';
+    a.href = dataUrl;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  img.src = dataUrl;
 }
 
 // ───────────────────────────────────────────────────────────────────────
